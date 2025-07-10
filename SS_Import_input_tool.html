@@ -1,0 +1,142 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PO Input Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    textarea, input, select, button { width: 100%; margin-top: 0.5rem; margin-bottom: 1rem; padding: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 0.5rem; text-align: left; }
+    .instructions { background: #f9f9f9; padding: 1rem; border: 1px solid #ccc; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>PO Input Tool</h1>
+
+  <div class="instructions">
+    <strong>Instructions:</strong>
+    <ul>
+      <li>Paste your data into the input area below (Ctrl + Shift + V)</li>
+      <li>Refer to the report: <a href="https://emazing.my.salesforce.com/00O3r000006mGeP" target="_blank">Salesforce Report</a></li>
+      <li>Input one or more PO Numbers (comma, tab, or space separated)</li>
+    </ul>
+  </div>
+
+  <label for="poInput">Drop PO Data:</label>
+  <textarea id="poInput" rows="10" placeholder="Paste your raw data here..."></textarea>
+
+  <label for="poNumbers">Enter PO Number(s):</label>
+  <input type="text" id="poNumbers" placeholder="Example: PO123, PO456" />
+
+  <button onclick="processPOData()">Lookup and Generate Output</button>
+
+  <div>
+    <strong>Bulk Update Links:</strong><br />
+    <a href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">iHR: MATRIXIFY IMPORT</a><br />
+    <a href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">ITAM: MATRIXIFY IMPORT</a>
+  </div>
+
+  <div id="outputArea"></div>
+  <button id="downloadBtn" onclick="downloadCSV()" style="display:none;">Download CSV</button>
+
+  <script>
+    function parseLine(line) {
+      const fields = line.split(/\t|\s{2,}/);
+      return {
+        externalId: fields[0] || '',
+        poNumber: fields[1] || '',
+        sku: fields[2] || '',
+        style: fields[3] || '',
+        title: fields[4] || '',
+        unitWeight: parseFloat(fields[5]) || 0,
+        unitDimension: fields[6] || '',
+        receivedDate: fields[7] || '',
+        discontinued: fields[8] || '',
+        status: fields[9] || '',
+        qoh: fields[10] || '',
+        inTransit: fields[11] || '',
+        receivedQty: fields[12] || '',
+        primaryLocation: fields[13] || '',
+        warehouseLocation: fields[14] || '',
+        upc: fields[15] || '',
+        asin: fields[16] || '',
+        itemId: fields[17] || '',
+        hsCode: fields[18] || ''
+      };
+    }
+
+    function processPOData() {
+      const rawData = document.getElementById("poInput").value.trim();
+      const poList = document.getElementById("poNumbers").value.split(/,|\t|\s+/).map(po => po.trim());
+
+      if (!rawData || poList.length === 0) return alert("Please provide both PO data and PO numbers.");
+
+      const lines = rawData.split("\n");
+      const headers = [
+        "Variant SKU", "Variant Weight (g)", "HS Code", "QOH", "Primary Location", "StatusV2",
+        "Variant Metafield: info.harmonized_system_code [single_line_text_field]",
+        "Variant Metafield: info.dimensional_groups [single_line_text_field]",
+        "Variant Metafield: info.origins [single_line_text_field]",
+        "Variant Metafield: info.shipping_groups [single_line_text_field]",
+        "Variant Metafield: info.length [single_line_text_field]",
+        "Variant Metafield: info.width [single_line_text_field]",
+        "Variant Metafield: info.height [single_line_text_field]"
+      ];
+
+      let output = [headers];
+
+      lines.forEach(line => {
+        const row = parseLine(line);
+        if (poList.includes(row.poNumber)) {
+          const [length, width, height] = (row.unitDimension || "x x").split(/[xX]/).map(d => d.trim());
+          const weightInGrams = Math.round(row.unitWeight * 1000);
+
+          output.push([
+            row.sku,
+            weightInGrams,
+            row.hsCode,
+            row.qoh,
+            row.primaryLocation,
+            row.status,
+            row.hsCode,
+            "Default",
+            "Main",
+            "All Products not assigned to a Shipping Group",
+            length,
+            width,
+            height
+          ]);
+        }
+      });
+
+      let tableHTML = "<table><tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
+      output.slice(1).forEach(row => {
+        tableHTML += "<tr>" + row.map(cell => `<td contenteditable>${cell}</td>`).join("") + "</tr>";
+      });
+      tableHTML += "</table>";
+
+      document.getElementById("outputArea").innerHTML = tableHTML;
+      document.getElementById("downloadBtn").style.display = "inline-block";
+    }
+
+    function downloadCSV() {
+      const rows = document.querySelectorAll("#outputArea table tr");
+      const csv = Array.from(rows).map(row =>
+        Array.from(row.querySelectorAll("td, th")).map(cell => '"' + cell.innerText + '"').join(",")
+      ).join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "po_data_output.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
