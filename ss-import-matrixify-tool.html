@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SS Import – Matrixify Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea, input { width: 100%; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background-color: #f2f2f2; }
+    .section { margin-bottom: 30px; }
+    .instructions { background: #f9f9f9; padding: 15px; border-left: 4px solid #ccc; }
+    .link { margin-bottom: 10px; display: block; }
+    .download { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>SS Import – Matrixify Tool</h1>
+
+  <div class="instructions">
+    <p><strong>Instructions:</strong> Paste SS Import Drop Data using <kbd>Ctrl + Shift + V</kbd> from the Salesforce report:</p>
+    <a class="link" href="https://emazing.my.salesforce.com/00O3r000006mGeP" target="_blank">Salesforce Report</a>
+  </div>
+
+  <div class="section">
+    <label for="rawInput">Drop Data Here:</label>
+    <textarea id="rawInput" rows="10" placeholder="Paste your data here..."></textarea>
+
+    <label for="poNumbers">PO Number(s) (comma, tab, or space separated):</label>
+    <input id="poNumbers" placeholder="Enter PO Numbers here...">
+
+    <button onclick="processData()">Process Data</button>
+  </div>
+
+  <div class="section">
+    <h2>Bulk Update Links</h2>
+    <a class="link" href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">iHR: MATRIXIFY IMPORT</a>
+    <a class="link" href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">ITAM: MATRIXIFY IMPORT</a>
+  </div>
+
+  <div class="section">
+    <h2>Data Output</h2>
+    <table id="outputTable">
+      <thead>
+        <tr>
+          <th>Variant SKU</th>
+          <th>Variant Weight (g)</th>
+          <th>HS Code</th>
+          <th>QOH</th>
+          <th>Primary Location</th>
+          <th>StatusV2</th>
+          <th>info.harmonized_system_code</th>
+          <th>info.dimensional_groups</th>
+          <th>info.origins</th>
+          <th>info.shipping_groups</th>
+          <th>info.length</th>
+          <th>info.width</th>
+          <th>info.height</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button class="download" onclick="downloadCSV()">Download CSV</button>
+  </div>
+
+  <script>
+    function parseUnitDimension(dim) {
+      const [l, w, h] = dim.split('x').map(v => v.trim());
+      return { length: l || '', width: w || '', height: h || '' };
+    }
+
+    function convertWeightToGrams(weight) {
+      const num = parseFloat(weight);
+      return isNaN(num) ? '' : Math.round(num * 1000);
+    }
+
+    function processData() {
+      const raw = document.getElementById('rawInput').value.trim();
+      const poFilter = document.getElementById('poNumbers').value
+        .split(/[,\t\s]+/)
+        .filter(Boolean);
+
+      const rows = raw.split('\n').map(line => line.split(/\t|,/));
+      const headers = rows[0];
+      const dataRows = rows.slice(1);
+      const outputTableBody = document.querySelector('#outputTable tbody');
+      outputTableBody.innerHTML = '';
+
+      dataRows.forEach(row => {
+        const entry = Object.fromEntries(headers.map((h, i) => [h.trim(), row[i] ? row[i].trim() : '']));
+
+        const poNumber = entry["Purchase Order: Purchase Order Name"];
+        if (!poFilter.includes(poNumber)) return;
+
+        const sku = entry["B2C Product: SKU"];
+        const weight = convertWeightToGrams(entry["Unit Weight"] || entry["Variant Weight"]);
+        const dimension = parseUnitDimension(entry["Unit Dimension"]);
+        const hsCode = entry["HS Code"];
+        const qoh = entry["Quantity On Hand"];
+        const location = entry["Primary Location"];
+        const status = entry["Statusv2"];
+
+        const rowHtml = `
+          <tr>
+            <td contenteditable>${sku}</td>
+            <td contenteditable>${weight}</td>
+            <td contenteditable>${hsCode}</td>
+            <td contenteditable>${qoh}</td>
+            <td contenteditable>${location}</td>
+            <td contenteditable>${status}</td>
+            <td contenteditable>${hsCode}</td>
+            <td contenteditable>Default</td>
+            <td contenteditable>Main</td>
+            <td contenteditable>All Products not assigned to a Shipping Group</td>
+            <td contenteditable>${dimension.length}</td>
+            <td contenteditable>${dimension.width}</td>
+            <td contenteditable>${dimension.height}</td>
+          </tr>`;
+
+        outputTableBody.insertAdjacentHTML('beforeend', rowHtml);
+      });
+    }
+
+    function downloadCSV() {
+      const rows = Array.from(document.querySelectorAll('#outputTable tr')).map(tr =>
+        Array.from(tr.children).map(td => `"${td.innerText.replace(/"/g, '""')}"`).join(',')
+      );
+      const csvContent = rows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'ss_import_matrixify_output.csv');
+      link.click();
+    }
+  </script>
+</body>
+</html>
