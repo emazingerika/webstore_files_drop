@@ -1,0 +1,208 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SS Import – Matrixify Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea, input, button { width: 100%; margin: 10px 0; padding: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .instructions { background-color: #f4f4f4; padding: 10px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>SS Import – Matrixify Tool</h1>
+  <div class="instructions">
+    <p><strong>Instructions:</strong></p>
+    <ul>
+      <li>Drop data via text using <code>Ctrl + Shift + V</code></li>
+      <li>Refer from report: <a href="https://emazing.my.salesforce.com/00O3r000006mGeP" target="_blank">Salesforce Report</a></li>
+    </ul>
+  </div>
+
+  <label for="poNumber">Enter PO Number(s) (separated by commas, tabs, or line breaks):</label>
+  <textarea id="poNumber" placeholder="e.g. PO1234, PO5678"></textarea>
+
+  <label for="rawData">Paste your SS Import Drop Data here:</label>
+  <textarea id="rawData" placeholder="Paste tabular data with headers here..."></textarea>
+
+  <button onclick="processData()">Generate Output</button>
+
+  <div>
+    <p><strong>Bulk Update to this link:</strong></p>
+    <ul>
+      <li><a href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">iHR: MATRIXIFY IMPORT</a></li>
+      <li><a href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">ITAM: MATRIXIFY IMPORT</a></li>
+    </ul>
+  </div>
+
+  <div id="output"></div>
+  <button id="downloadBtn" style="display:none;" onclick="downloadCSV()">Download CSV</button>
+
+  <script>
+
+    function processData() {
+
+      const poNumbers = document.getElementById('poNumber').value
+
+        .split(/[,	
+]+/).map(p => p.trim()).filter(p => p);
+
+
+
+      const rawText = document.getElementById('rawData').value;
+
+      const rows = rawText.trim().split(/\n+/);
+
+      const headers = rows[0].split(/\t+/);
+
+      const data = rows.slice(1).map(row => {
+
+        const cols = row.split(/\t+/);
+
+        let obj = {};
+
+        headers.forEach((h, i) => obj[h.trim()] = cols[i]?.trim() || '');
+
+        return obj;
+
+      });
+
+
+
+      const matchedData = data.filter(d => poNumbers.includes(d["Purchase Order: Purchase Order Name"]));
+
+
+
+      const output = matchedData.map(d => {
+
+        let [length, width, height] = (d["Unit Dimension"] || '').split('x').map(Number);
+
+        const unitWeightG = Math.round(parseFloat(d["Unit Weight"] || 0) * 28.3495);
+
+        return {
+
+          "Variant SKU": d["B2C Product: SKU"],
+
+          "Variant Weight": unitWeightG,
+
+          "Variant Command": "UPDATE",
+
+          "Variant Metafield: info.harmonized_system_code [single_line_text_field]": d["Shopify Product Type"],
+
+          "Variant Metafield: info.dimensional_groups [single_line_text_field]": "Default",
+
+          "Variant Metafield: info.origins [single_line_text_field]": "Main",
+
+          "Variant Metafield: info.shipping_groups [single_line_text_field]": "All Products not assigned to a Shipping Group",
+
+          "Variant Metafield: info.length [single_line_text_field]": length || '',
+
+          "Variant Metafield: info.width [single_line_text_field]": width || '',
+
+          "Variant Metafield: info.height [single_line_text_field]": height || ''
+
+        };
+
+      });
+
+
+
+      if (!output.length) {
+
+        document.getElementById("output").innerHTML = "<p>No matching PO found.</p>";
+
+        document.getElementById("downloadBtn").style.display = "none";
+
+        return;
+
+      }
+
+
+
+      const table = document.createElement("table");
+
+      const headersOut = Object.keys(output[0]);
+
+      const thead = document.createElement("thead");
+
+      const tr = document.createElement("tr");
+
+      headersOut.forEach(h => {
+
+        const th = document.createElement("th");
+
+        th.textContent = h;
+
+        tr.appendChild(th);
+
+      });
+
+      thead.appendChild(tr);
+
+      table.appendChild(thead);
+
+
+
+      const tbody = document.createElement("tbody");
+
+      output.forEach(row => {
+
+        const tr = document.createElement("tr");
+
+        headersOut.forEach(h => {
+
+          const td = document.createElement("td");
+
+          td.textContent = row[h];
+
+          tr.appendChild(td);
+
+        });
+
+        tbody.appendChild(tr);
+
+      });
+
+      table.appendChild(tbody);
+
+
+
+      document.getElementById("output").innerHTML = "";
+
+      document.getElementById("output").appendChild(table);
+
+      document.getElementById("downloadBtn").style.display = "block";
+
+      window.generatedData = { headers: headersOut, rows: output };
+
+    }
+
+
+
+    function downloadCSV() {
+
+      const { headers, rows } = window.generatedData;
+
+      let csv = headers.join(',') + "\n" +
+
+        rows.map(row => headers.map(h => `"${row[h]}"`).join(',')).join("\n");
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+
+      const link = document.createElement('a');
+
+      link.href = URL.createObjectURL(blob);
+
+      link.download = 'ss_import_matrixify_output.csv';
+
+      link.click();
+
+    }
+
+  </script>
+</body>
+</html>
