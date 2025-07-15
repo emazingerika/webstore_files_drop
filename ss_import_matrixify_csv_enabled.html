@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SS Import – Matrixify Tool (CSV Upload)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea, input, button { width: 100%; margin: 10px 0; padding: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .instructions { background-color: #f4f4f4; padding: 10px; margin-bottom: 20px; }
+    .error { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>SS Import – Matrixify Tool (CSV Upload)</h1>
+  <div class="instructions">
+    <p><strong>Instructions:</strong></p>
+    <ul>
+      <li>Upload a CSV file using the format described in the Salesforce report.</li>
+      <li>Or paste data directly below (comma-separated).</li>
+    </ul>
+  </div>
+
+  <label for="poNumber">Enter PO Number(s) (separated by commas, tabs, or line breaks):</label>
+  <textarea id="poNumber" placeholder="e.g. PO1234, PO5678">PO1001</textarea>
+
+  <label for="csvInput">Upload CSV file:</label>
+  <input type="file" id="csvInput" accept=".csv" />
+
+  <label for="rawData">Or paste your SS Import Drop Data here (comma-separated):</label>
+  <textarea id="rawData" rows="10">Purchase Order: Purchase Order Name,B2C Product: SKU,Style,Shopify Product Type,Statusv2,Title,Quantity On Hand,Primary Location,Unit Weight,Unit Dimension,UPC,ASIN,Item ID
+PO1001,SKU123,CoolStyle,Apparel,Active,Cool T-Shirt,10,Main Warehouse,1.2,10x5x2,123456789012,B00TESTASIN,ITM123</textarea>
+
+  <button onclick="processData()">Generate Output</button>
+
+  <div id="output"></div>
+  <button id="downloadBtn" style="display:none;" onclick="downloadCSV()">Download CSV</button>
+
+  <script>
+    let parsedData = [];
+
+    document.getElementById('csvInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.trim().split(/\r?\n/);
+        const headers = lines[0].split(',').map(h => h.trim());
+        parsedData = lines.slice(1).map(line => {
+          const cols = line.split(',').map(c => c.trim());
+          let obj = {};
+          headers.forEach((h, i) => obj[h] = cols[i] || '');
+          return obj;
+        });
+        document.getElementById('rawData').value = '';
+        alert('CSV file loaded successfully. Now click "Generate Output".');
+      };
+      reader.readAsText(file);
+    });
+
+    function processData() {
+      const poInput = document.getElementById('poNumber').value;
+      const poNumbers = poInput.split(/[,	\n]+/).map(p => p.trim()).filter(p => p);
+      const rawText = document.getElementById('rawData').value;
+      let data = [];
+
+      if (parsedData.length) {
+        data = parsedData;
+      } else if (rawText.trim()) {
+        const lines = rawText.trim().split(/\n+/);
+        const headers = lines[0].split(',').map(h => h.trim());
+        data = lines.slice(1).map(row => {
+          const cols = row.split(',').map(c => c.trim());
+          let obj = {};
+          headers.forEach((h, i) => obj[h] = cols[i] || '');
+          return obj;
+        });
+      }
+
+      const matchedData = data.filter(d => poNumbers.includes(d["Purchase Order: Purchase Order Name"]));
+      if (matchedData.length === 0) {
+        document.getElementById('output').innerHTML = '<p class="error">No matching PO Numbers found. Check your input.</p>';
+        document.getElementById('downloadBtn').style.display = 'none';
+        return;
+      }
+
+      const output = matchedData.map(d => {
+        const [length, width, height] = (d["Unit Dimension"] || '').split('x').map(n => parseFloat(n) || '');
+        const weightGrams = Math.round(parseFloat(d["Unit Weight"] || 0) * 28.3495);
+        return {
+          "Variant SKU": d["B2C Product: SKU"],
+          "Variant Weight": weightGrams,
+          "Variant Command": "UPDATE",
+          "Variant Metafield: info.harmonized_system_code [single_line_text_field]": d["Shopify Product Type"],
+          "Variant Metafield: info.dimensional_groups [single_line_text_field]": "Default",
+          "Variant Metafield: info.origins [single_line_text_field]": "Main",
+          "Variant Metafield: info.shipping_groups [single_line_text_field]": "All Products not assigned to a Shipping Group",
+          "Variant Metafield: info.length [single_line_text_field]": length,
+          "Variant Metafield: info.width [single_line_text_field]": width,
+          "Variant Metafield: info.height [single_line_text_field]": height
+        };
+      });
+
+      const table = document.createElement('table');
+      const headerRow = document.createElement('tr');
+      Object.keys(output[0]).forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+
+      output.forEach(row => {
+        const tr = document.createElement('tr');
+        Object.values(row).forEach(val => {
+          const td = document.createElement('td');
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+
+      document.getElementById('output').innerHTML = '';
+      document.getElementById('output').appendChild(table);
+      document.getElementById('downloadBtn').style.display = 'block';
+      window.generatedData = { headers: Object.keys(output[0]), rows: output };
+    }
+
+    function downloadCSV() {
+      const { headers, rows } = window.generatedData;
+      let csv = headers.join(',') + "\n" +
+        rows.map(row => headers.map(h => `"${row[h]}"`).join(',')).join("\n");
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'ss_import_matrixify_output.csv';
+      link.click();
+    }
+  </script>
+</body>
+</html>
