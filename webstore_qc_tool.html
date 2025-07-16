@@ -1,0 +1,152 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Webstore QC Tool</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { font-size: 24px; }
+    label { font-weight: bold; }
+    input[type="file"] { margin: 10px 0; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 5px; }
+    th { background-color: #f2f2f2; }
+    #resultTable { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Webstore QC Tool</h1>
+  <p><strong>Instructions:</strong></p>
+  <ul>
+    <li>File A: <a href="https://emazing.my.salesforce.com/00OPH000007OVGL" target="_blank">Salesforce Export</a></li>
+    <li>File B: Matrixify Export<br>
+      iHR: Webstore QC Check<br>
+      ITAM: Webstore QC Edition</li>
+  </ul>
+
+  <label for="fileA">File A: Salesforce Export</label><br />
+  <input type="file" id="fileA" accept=".xlsx, .xls, .csv" /><br />
+
+  <label for="fileB">File B: Matrixify Export</label><br />
+  <input type="file" id="fileB" accept=".xlsx, .xls, .csv" /><br />
+
+  <button onclick="processFiles()">Upload & Compare</button>
+
+  <div id="resultTable"></div>
+  <a id="downloadLink" style="display:none; margin-top: 20px;">Download XLSX</a>
+
+  <script>
+    let fileAData = [], fileBData = [];
+
+    function readExcel(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        callback(jsonData);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function normalizeWeight(weight) {
+      return Math.round(parseFloat(weight || 0) * 1000);
+    }
+
+    function processFiles() {
+      const fileAInput = document.getElementById("fileA").files[0];
+      const fileBInput = document.getElementById("fileB").files[0];
+      if (!fileAInput || !fileBInput) return alert("Please upload both files.");
+
+      readExcel(fileAInput, function(dataA) {
+        fileAData = dataA;
+        readExcel(fileBInput, function(dataB) {
+          fileBData = dataB;
+          alert("Files uploaded successfully!");
+          compareData();
+        });
+      });
+    }
+
+    function compareData() {
+      const result = [];
+      const fileBMap = {};
+      fileBData.forEach(row => fileBMap[row["Variant SKU"]] = row);
+
+      fileAData.forEach(a => {
+        const sku = a["B2C Product: SKU"];
+        const b = fileBMap[sku];
+        if (!b) return;
+
+        const title = a["Title"];
+        const comparisons = [
+          ["UPC", "Variant Barcode", "Fix UPC"],
+          ["True Special Price", "Variant Price", "Fix Special Price"],
+          ["True Price", "Variant Compare At Price", "Fix Price"],
+          ["Product Cost", "Variant Cost", "Fix Cost"],
+          ["Unit Weight", "Variant Weight", "Fix Weight"]
+        ];
+
+        comparisons.forEach(pair => {
+          let aVal = a[pair[0]];
+          let bVal = b[pair[1]];
+
+          if (pair[2] === "Fix Weight") {
+            aVal = normalizeWeight(aVal);
+            bVal = parseFloat(bVal);
+          }
+
+          if (pair[2] === "Fix Price" && (!bVal || bVal === "")) return;
+          if (String(aVal) !== String(bVal)) {
+            result.push({
+              SKU: sku,
+              Title: title,
+              "Mismatched Field": `ERROR: ${pair[2]}`,
+              "Source File Value": aVal || "",
+              "Comparison File Value": bVal || ""
+            });
+          }
+        });
+      });
+
+      displayResult(result);
+    }
+
+    function displayResult(result) {
+      if (result.length === 0) {
+        document.getElementById("resultTable").innerHTML = "<p>No discrepancies found.</p>";
+        return;
+      }
+
+      let table = "<table><tr><th>SKU</th><th>Title</th><th>Mismatched Field</th><th>Source File Value</th><th>Comparison File Value</th></tr>";
+      result.forEach(row => {
+        table += `<tr>
+          <td>${row.SKU}</td>
+          <td>${row.Title}</td>
+          <td>${row["Mismatched Field"]}</td>
+          <td>${row["Source File Value"]}</td>
+          <td>${row["Comparison File Value"]}</td>
+        </tr>`;
+      });
+      table += "</table>";
+
+      document.getElementById("resultTable").innerHTML = table;
+
+      const worksheet = XLSX.utils.json_to_sheet(result);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Discrepancies");
+      const wbout = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([wbout], { type: "application/octet-stream" });
+      const link = document.getElementById("downloadLink");
+      link.href = URL.createObjectURL(blob);
+      link.download = "discrepancies.xlsx";
+      link.textContent = "Download XLSX Report";
+      link.style.display = "inline-block";
+    }
+  </script>
+</body>
+</html>
