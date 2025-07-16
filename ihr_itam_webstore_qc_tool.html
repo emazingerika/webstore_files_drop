@@ -358,6 +358,7 @@
             <div class="download-section">
                 <button class="download-btn" id="downloadCsv" disabled>Download CSV Report</button>
                 <button class="download-btn" id="downloadXlsx" disabled>Download XLSX Report</button>
+                <button class="download-btn" id="generateAgain" disabled style="background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);">Generate Again</button>
             </div>
             
             <div class="instructions">
@@ -468,6 +469,7 @@
                 // Enable download buttons
                 document.getElementById('downloadCsv').disabled = false;
                 document.getElementById('downloadXlsx').disabled = false;
+                document.getElementById('generateAgain').disabled = false;
             }, 500);
         });
         
@@ -633,6 +635,20 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'QC Report');
             XLSX.writeFile(wb, 'webstore_qc_report.xlsx');
+        });
+        
+        // Generate Again function
+        document.getElementById('generateAgain').addEventListener('click', function() {
+            if (fileAData && fileBData) {
+                document.getElementById('results').innerHTML = '<div class="loading">Regenerating report...</div>';
+                
+                setTimeout(() => {
+                    processedResults = processFiles();
+                    displayResults();
+                }, 500);
+            } else {
+                alert('Please upload both files first.');
+            }
         });
     </script>
 </body>
