@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webstore QC Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .download-section {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+        
+        .download-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid #2196f3;
+        }
+        
+        .instructions h3 {
+            color: #1976d2;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .instructions ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .instructions li {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .instructions a {
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .instructions a:hover {
+            text-decoration: underline;
+        }
+        
+        .file-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .file-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px dashed #dee2e6;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .file-section:hover {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+        
+        .file-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-label {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            display: inline-block;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+        
+        .file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 123, 255, 0.3);
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .file-info.success {
+            border-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .process-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .process-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
+        }
+        
+        .process-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .results-table th {
+            background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .results-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .results-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .results-table tr:hover {
+            background: #e9ecef;
+        }
+        
+        .error-fix-upc { color: #dc3545; font-weight: bold; }
+        .error-fix-special-price { color: #fd7e14; font-weight: bold; }
+        .error-fix-price { color: #ffc107; font-weight: bold; }
+        .error-fix-cost { color: #6f42c1; font-weight: bold; }
+        .error-fix-weight { color: #20c997; font-weight: bold; }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-content h2 {
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        
+        .modal-content button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+        }
+        
+        .modal-content button:hover {
+            background: #0056b3;
+        }
+        
+        @media (max-width: 768px) {
+            .file-sections {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Webstore QC Tool</h1>
+            <p>Quality Checking Tool for Salesforce and Shopify Data Comparison</p>
+        </div>
+        
+        <div class="content">
+            <div class="download-section">
+                <button class="download-btn" id="downloadCsv" disabled>Download CSV Report</button>
+                <button class="download-btn" id="downloadXlsx" disabled>Download XLSX Report</button>
+            </div>
+            
+            <div class="instructions">
+                <h3>Instructions:</h3>
+                <ul>
+                    <li><strong>File A: Salesforce Export</strong> - <a href="https://emazing.my.salesforce.com/00OPH000007OVGL" target="_blank">https://emazing.my.salesforce.com/00OPH000007OVGL</a></li>
+                    <li><strong>File B: Matrixify Export</strong> - iHR: Webstore QC Check | ITAM: Webstore QC Edition</li>
+                </ul>
+            </div>
+            
+            <div class="file-sections">
+                <div class="file-section">
+                    <h3>File A: Salesforce Export</h3>
+                    <label for="fileA" class="file-label">Choose Salesforce CSV File</label>
+                    <input type="file" id="fileA" class="file-input" accept=".csv">
+                    <div id="fileAInfo" class="file-info" style="display: none;">
+                        <span id="fileAName"></span>
+                    </div>
+                </div>
+                
+                <div class="file-section">
+                    <h3>File B: Matrixify Export</h3>
+                    <label for="fileB" class="file-label">Choose Matrixify CSV File</label>
+                    <input type="file" id="fileB" class="file-input" accept=".csv">
+                    <div id="fileBInfo" class="file-info" style="display: none;">
+                        <span id="fileBName"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="process-section">
+                <button class="process-btn" id="processFiles" disabled>Process Files</button>
+            </div>
+            
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+    
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h2>Files Uploaded Successfully!</h2>
+            <p>Both files have been loaded and are ready for processing.</p>
+            <button onclick="closeModal()">Continue</button>
+        </div>
+    </div>
+    
+    <script>
+        let fileAData = null;
+        let fileBData = null;
+        let processedResults = [];
+        
+        // File upload handlers
+        document.getElementById('fileA').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('fileAName').textContent = file.name;
+                document.getElementById('fileAInfo').style.display = 'block';
+                document.getElementById('fileAInfo').classList.add('success');
+                
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        fileAData = results.data;
+                        checkFilesReady();
+                    }
+                });
+            }
+        });
+        
+        document.getElementById('fileB').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('fileBName').textContent = file.name;
+                document.getElementById('fileBInfo').style.display = 'block';
+                document.getElementById('fileBInfo').classList.add('success');
+                
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        fileBData = results.data;
+                        checkFilesReady();
+                    }
+                });
+            }
+        });
+        
+        function checkFilesReady() {
+            if (fileAData && fileBData) {
+                document.getElementById('processFiles').disabled = false;
+                document.getElementById('confirmModal').style.display = 'block';
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+        
+        // Process files
+        document.getElementById('processFiles').addEventListener('click', function() {
+            document.getElementById('results').innerHTML = '<div class="loading">Processing files...</div>';
+            
+            setTimeout(() => {
+                processedResults = processFiles();
+                displayResults();
+                
+                // Enable download buttons
+                document.getElementById('downloadCsv').disabled = false;
+                document.getElementById('downloadXlsx').disabled = false;
+            }, 500);
+        });
+        
+        function processFiles() {
+            const results = [];
+            
+            // Create lookup map for File B using Variant SKU
+            const fileBMap = {};
+            fileBData.forEach(row => {
+                const variantSku = row['Variant SKU'];
+                if (variantSku) {
+                    fileBMap[variantSku] = row;
+                }
+            });
+            
+            // Process each row in File A
+            fileAData.forEach(rowA => {
+                const skuA = rowA['B2C Product: SKU'];
+                if (!skuA) return;
+                
+                const rowB = fileBMap[skuA];
+                if (!rowB) return; // SKU not found in File B
+                
+                const title = rowA['Title'] || '';
+                
+                // Pair 1: UPC vs Variant Barcode
+                const upcA = rowA['UPC'];
+                const barcodeB = rowB['Variant Barcode'];
+                if (upcA !== barcodeB) {
+                    results.push({
+                        SKU: skuA,
+                        Title: title,
+                        'Mismatched Field': 'ERROR: Fix UPC',
+                        '(SF) Source File Value': upcA || '',
+                        '(SY) Comparison File Value': barcodeB || ''
+                    });
+                }
+                
+                // Pair 2: True Special Price vs Variant Price
+                const specialPriceA = rowA['True Special Price'];
+                const priceB = rowB['Variant Price'];
+                if (specialPriceA !== priceB) {
+                    results.push({
+                        SKU: skuA,
+                        Title: title,
+                        'Mismatched Field': 'ERROR: Fix Special Price',
+                        '(SF) Source File Value': specialPriceA || '',
+                        '(SY) Comparison File Value': priceB || ''
+                    });
+                }
+                
+                // Pair 3: True Price vs Variant Compare At Price (ignore if Compare At Price is blank)
+                const truePriceA = rowA['True Price'];
+                const compareAtPriceB = rowB['Variant Compare At Price'];
+                if (compareAtPriceB && compareAtPriceB.trim() !== '' && truePriceA !== compareAtPriceB) {
+                    results.push({
+                        SKU: skuA,
+                        Title: title,
+                        'Mismatched Field': 'ERROR: Fix Price',
+                        '(SF) Source File Value': truePriceA || '',
+                        '(SY) Comparison File Value': compareAtPriceB || ''
+                    });
+                }
+                
+                // Pair 4: Product Cost vs Variant Cost
+                const costA = rowA['Product Cost'];
+                const costB = rowB['Variant Cost'];
+                if (costA !== costB) {
+                    results.push({
+                        SKU: skuA,
+                        Title: title,
+                        'Mismatched Field': 'ERROR: Fix Cost',
+                        '(SF) Source File Value': costA || '',
+                        '(SY) Comparison File Value': costB || ''
+                    });
+                }
+                
+                // Pair 5: Unit Weight vs Variant Weight (multiply by 28.35 and make whole number)
+                const unitWeightA = rowA['Unit Weight'];
+                const variantWeightB = rowB['Variant Weight'];
+                
+                if (unitWeightA && variantWeightB) {
+                    const convertedWeightA = Math.round(parseFloat(unitWeightA) * 28.35);
+                    const weightB = Math.round(parseFloat(variantWeightB));
+                    
+                    if (!isNaN(convertedWeightA) && !isNaN(weightB) && convertedWeightA !== weightB) {
+                        results.push({
+                            SKU: skuA,
+                            Title: title,
+                            'Mismatched Field': 'ERROR: Fix Weight',
+                            '(SF) Source File Value': convertedWeightA.toString(),
+                            '(SY) Comparison File Value': weightB.toString()
+                        });
+                    }
+                }
+            });
+            
+            return results;
+        }
+        
+        function displayResults() {
+            const resultsDiv = document.getElementById('results');
+            
+            if (processedResults.length === 0) {
+                resultsDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: #28a745; font-size: 1.2em;"><strong>✓ No discrepancies found! All data matches correctly.</strong></div>';
+                return;
+            }
+            
+            let html = `
+                <h3>Quality Check Results (${processedResults.length} discrepancies found)</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Title</th>
+                            <th>Mismatched Field</th>
+                            <th>(SF) Source File Value</th>
+                            <th>(SY) Comparison File Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            processedResults.forEach(row => {
+                const errorClass = row['Mismatched Field'].toLowerCase().replace(/[^a-z]/g, '-');
+                html += `
+                    <tr>
+                        <td>${row.SKU}</td>
+                        <td>${row.Title}</td>
+                        <td class="${errorClass}">${row['Mismatched Field']}</td>
+                        <td>${row['(SF) Source File Value']}</td>
+                        <td>${row['(SY) Comparison File Value']}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            resultsDiv.innerHTML = html;
+        }
+        
+        // Download functions
+        document.getElementById('downloadCsv').addEventListener('click', function() {
+            if (processedResults.length === 0) {
+                alert('No data to download. Please process files first.');
+                return;
+            }
+            
+            const csvContent = Papa.unparse(processedResults);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'webstore_qc_report.csv';
+            link.click();
+        });
+        
+        document.getElementById('downloadXlsx').addEventListener('click', function() {
+            if (processedResults.length === 0) {
+                alert('No data to download. Please process files first.');
+                return;
+            }
+            
+            const ws = XLSX.utils.json_to_sheet(processedResults);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'QC Report');
+            XLSX.writeFile(wb, 'webstore_qc_report.xlsx');
+        });
+    </script>
+</body>
+</html>
