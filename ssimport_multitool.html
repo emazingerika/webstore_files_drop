@@ -322,6 +322,7 @@ PO001
 PO002
 PO003" style="height: 80px;"></textarea>
                 <small style="color: #666; font-size: 12px;">Supports: spaces, commas, tabs, new lines, semicolons</small>
+                <button type="button" onclick="testPOParsing()" style="margin-top: 10px; padding: 5px 15px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">Test PO Parsing</button>
             </div>
             
             <button onclick="generateMatrixifyOutput()">Generate Matrixify Output</button>
@@ -341,6 +342,7 @@ PO001
 PO002
 PO003" style="height: 80px;"></textarea>
                 <small style="color: #666; font-size: 12px;">Supports: spaces, commas, tabs, new lines, semicolons</small>
+                <button type="button" onclick="testPOParsingReceived()" style="margin-top: 10px; padding: 5px 15px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">Test PO Parsing</button>
             </div>
             
             <button onclick="generateReceivedOutput()">Generate Received Inventories Output</button>
@@ -465,45 +467,43 @@ PO003" style="height: 80px;"></textarea>
         function parsePONumbers(input) {
             if (!input) return [];
             
-            // Handle various separators and formats
+            console.log('Raw input:', JSON.stringify(input));
+            
+            // Clean the input first
+            let cleanInput = input.trim();
+            
+            // Replace multiple whitespace with single space
+            cleanInput = cleanInput.replace(/\s+/g, ' ');
+            
+            // Try different splitting strategies
             let poNumbers = [];
             
-            // First, try to split by common delimiters
-            let parts = input.split(/[,;|\t\n\r]+/);
-            
-            // If that doesn't work well, try splitting by spaces but be smarter about it
-            if (parts.length === 1) {
-                // Split by multiple spaces or mixed separators
-                parts = input.split(/\s{2,}|[,;|\t\n\r]\s*|\s*[,;|\t\n\r]/);
+            // Strategy 1: Split by common delimiters first
+            if (cleanInput.includes(',')) {
+                poNumbers = cleanInput.split(',');
+            } else if (cleanInput.includes(';')) {
+                poNumbers = cleanInput.split(';');
+            } else if (cleanInput.includes('\t')) {
+                poNumbers = cleanInput.split('\t');
+            } else if (cleanInput.includes('\n')) {
+                poNumbers = cleanInput.split('\n');
+            } else {
+                // Strategy 2: Split by spaces
+                poNumbers = cleanInput.split(' ');
             }
             
-            // If still one part, try splitting by single spaces
-            if (parts.length === 1) {
-                parts = input.split(/\s+/);
-            }
+            // Clean each PO number
+            poNumbers = poNumbers
+                .map(po => po.trim())
+                .filter(po => po.length > 0)
+                .filter(po => po !== '');
             
-            // Clean up each part
-            parts.forEach(part => {
-                const cleaned = part.trim();
-                if (cleaned.length > 0) {
-                    // Check if this part contains multiple POs (like "PO001 PO002")
-                    if (cleaned.includes(' ') && !cleaned.includes(',')) {
-                        // Split by space if it looks like multiple POs
-                        const subParts = cleaned.split(/\s+/);
-                        subParts.forEach(subPart => {
-                            const subCleaned = subPart.trim();
-                            if (subCleaned.length > 0) {
-                                poNumbers.push(subCleaned);
-                            }
-                        });
-                    } else {
-                        poNumbers.push(cleaned);
-                    }
-                }
-            });
+            // Remove duplicates
+            poNumbers = [...new Set(poNumbers)];
             
-            // Remove duplicates and return
-            return [...new Set(poNumbers)].filter(po => po.length > 0);
+            console.log('Parsed PO numbers:', poNumbers);
+            
+            return poNumbers;
         }
         
         function parseDimensions(dimensionString) {
@@ -717,15 +717,25 @@ PO003" style="height: 80px;"></textarea>
             showStatus('All data cleared', 'info');
         }
         
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        function testPOParsing() {
+            const input = document.getElementById('poNumbers').value;
+            const parsed = parsePONumbers(input);
             
-            // Auto-hide after 5 seconds for success/info messages
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => {
-                    statusDiv.innerHTML = '';
-                }, 5000);
+            if (parsed.length === 0) {
+                showStatus('No PO numbers found. Please check your input format.', 'error');
+            } else {
+                showStatus(`Found ${parsed.length} PO numbers: ${parsed.join(', ')}`, 'success');
+            }
+        }
+        
+        function testPOParsingReceived() {
+            const input = document.getElementById('poNumbersReceived').value;
+            const parsed = parsePONumbers(input);
+            
+            if (parsed.length === 0) {
+                showStatus('No PO numbers found. Please check your input format.', 'error');
+            } else {
+                showStatus(`Found ${parsed.length} PO numbers: ${parsed.join(', ')}`, 'success');
             }
         }
         
