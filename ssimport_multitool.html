@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SS Import Drop Data Management Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #3498db;
+        }
+        
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+        
+        input[type="text"], input[type="file"], select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="text"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        textarea {
+            height: 200px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .export-btn {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        }
+        
+        .export-btn:hover {
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+        
+        .clear-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .clear-btn:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 14px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+            word-wrap: break-word;
+            max-width: 200px;
+        }
+        
+        th {
+            background: linear-gradient(45deg, #34495e, #2c3e50);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .links-section {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .links-section h3 {
+            margin-bottom: 15px;
+        }
+        
+        .links-section a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            margin-right: 20px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+        
+        .links-section a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b8daff;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .row-count {
+            background: #e8f4f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .toggle-section {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .toggle-section:hover {
+            background: #2980b9;
+        }
+        
+        .section-content {
+            display: none;
+        }
+        
+        .section-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SS Import Drop Data Management Tool</h1>
+        
+        <div class="section">
+            <h2>Data Import</h2>
+            <div class="input-group">
+                <label for="csvFile">Upload CSV File:</label>
+                <input type="file" id="csvFile" accept=".csv" />
+            </div>
+            
+            <div class="input-group">
+                <label for="dataInput">Or paste data directly (one line per row):</label>
+                <textarea id="dataInput" placeholder="Purchase Order Name, SKU, Style, Shopify Product Type, Statusv2, Title, QOH, Primary Location, Unit Weight, Unit Dimension, UPC, ASIN, Item ID"></textarea>
+            </div>
+            
+            <button onclick="processData()">Process Data</button>
+            <button onclick="clearData()" class="clear-btn">Clear All Data</button>
+        </div>
+        
+        <div class="section">
+            <h2>Tool Selection</h2>
+            <div class="input-group">
+                <label for="toolSelect">Select Tool:</label>
+                <select id="toolSelect">
+                    <option value="matrixify">A Matrixify Tool</option>
+                    <option value="received">B Received Inventories</option>
+                </select>
+            </div>
+        </div>
+        
+        <button class="toggle-section" onclick="toggleSection('matrixify-section')">
+            A Matrixify Tool Settings
+        </button>
+        <div id="matrixify-section" class="section-content">
+            <div class="links-section">
+                <h3>Bulk Update Links:</h3>
+                <a href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">iHR: MATRIXIFY IMPORT</a>
+                <a href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">ITAM: MATRIXIFY IMPORT</a>
+            </div>
+            
+            <div class="input-group">
+                <label for="poNumbers">PO Numbers (separate multiple with comma, tab, or space):</label>
+                <input type="text" id="poNumbers" placeholder="PO001, PO002, PO003" />
+            </div>
+            
+            <button onclick="generateMatrixifyOutput()">Generate Matrixify Output</button>
+            <button onclick="exportToExcel('matrixify')" class="export-btn">Export to Excel</button>
+        </div>
+        
+        <button class="toggle-section" onclick="toggleSection('received-section')">
+            B Received Inventories Settings
+        </button>
+        <div id="received-section" class="section-content">
+            <div class="input-group">
+                <label for="poNumbersReceived">PO Numbers (separate multiple with comma, tab, or space):</label>
+                <input type="text" id="poNumbersReceived" placeholder="PO001, PO002, PO003" />
+            </div>
+            
+            <button onclick="generateReceivedOutput()">Generate Received Inventories Output</button>
+            <button onclick="exportToExcel('received')" class="export-btn">Export to Excel</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Processing data...</p>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div class="results" id="results" style="display: none;">
+            <div class="row-count" id="rowCount"></div>
+            <div class="table-container">
+                <table id="resultsTable">
+                    <thead id="tableHeader"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let importedData = [];
+        let currentResults = [];
+        let currentTool = 'matrixify';
+        
+        // Initialize the tool
+        document.getElementById('toolSelect').addEventListener('change', function() {
+            currentTool = this.value;
+        });
+        
+        // Toggle section visibility
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            section.classList.toggle('active');
+        }
+        
+        // Show initial section based on tool selection
+        document.getElementById('matrixify-section').classList.add('active');
+        
+        // File upload handler
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const csv = e.target.result;
+                    Papa.parse(csv, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            importedData = results.data;
+                            showStatus(`Successfully imported ${importedData.length} rows from CSV`, 'success');
+                        },
+                        error: function(error) {
+                            showStatus(`Error parsing CSV: ${error.message}`, 'error');
+                        }
+                    });
+                };
+                reader.readAsText(file);
+            }
+        });
+        
+        function processData() {
+            showLoading(true);
+            
+            const textData = document.getElementById('dataInput').value.trim();
+            
+            if (textData) {
+                // Process pasted text data
+                const lines = textData.split('\n').filter(line => line.trim());
+                const headers = [
+                    'Purchase Order Name', 'SKU', 'Style', 'Shopify Product Type', 
+                    'Statusv2', 'Title', 'QOH', 'Primary Location', 'Unit Weight', 
+                    'Unit Dimension', 'UPC', 'ASIN', 'Item ID'
+                ];
+                
+                importedData = lines.map(line => {
+                    const values = line.split(',').map(v => v.trim());
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index] || '';
+                    });
+                    return row;
+                });
+                
+                showStatus(`Successfully processed ${importedData.length} rows from text input`, 'success');
+            } else if (importedData.length === 0) {
+                showStatus('Please upload a CSV file or paste data', 'error');
+                showLoading(false);
+                return;
+            }
+            
+            // Clean and normalize data
+            importedData = importedData.map(row => {
+                const cleanRow = {};
+                // Map fields according to specifications
+                cleanRow['Purchase Order Name'] = row['Purchase Order Name'] || row['Purchase Order'] || '';
+                cleanRow['SKU'] = row['SKU'] || row['B2C Product'] || '';
+                cleanRow['Style'] = row['Style'] || '';
+                cleanRow['Shopify Product Type'] = row['Shopify Product Type'] || '';
+                cleanRow['Statusv2'] = row['Statusv2'] || '';
+                cleanRow['Title'] = row['Title'] || '';
+                cleanRow['QOH'] = row['QOH'] || row['Quantity On Hand'] || '';
+                cleanRow['Primary Location'] = row['Primary Location'] || '';
+                cleanRow['Unit Weight'] = row['Unit Weight'] || '';
+                cleanRow['Unit Dimension'] = row['Unit Dimension'] || '';
+                cleanRow['UPC'] = row['UPC'] || '';
+                cleanRow['ASIN'] = row['ASIN'] || '';
+                cleanRow['Item ID'] = row['Item ID'] || '';
+                
+                return cleanRow;
+            });
+            
+            showLoading(false);
+            showStatus(`Data processed successfully. ${importedData.length} rows ready for processing.`, 'success');
+        }
+        
+        function parsePONumbers(input) {
+            if (!input) return [];
+            return input.split(/[,\s\t]+/)
+                       .map(po => po.trim())
+                       .filter(po => po.length > 0);
+        }
+        
+        function parseDimensions(dimensionString) {
+            if (!dimensionString) return { length: '', width: '', height: '' };
+            
+            const parts = dimensionString.split('x').map(p => p.trim());
+            return {
+                length: parts[0] || '',
+                width: parts[1] || '',
+                height: parts[2] || ''
+            };
+        }
+        
+        function convertToGrams(weight) {
+            if (!weight) return '';
+            
+            // Remove any non-numeric characters except decimal point
+            const numericWeight = parseFloat(weight.toString().replace(/[^\d.]/g, ''));
+            
+            if (isNaN(numericWeight)) return '';
+            
+            // Assume input is in pounds, convert to grams
+            const grams = Math.round(numericWeight * 453.592);
+            return grams.toString();
+        }
+        
+        function generateMatrixifyOutput() {
+            if (importedData.length === 0) {
+                showStatus('Please import data first', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            const poNumbers = parsePONumbers(document.getElementById('poNumbers').value);
+            
+            if (poNumbers.length === 0) {
+                showStatus('Please enter at least one PO number', 'error');
+                showLoading(false);
+                return;
+            }
+            
+            // Filter data by PO numbers
+            const filteredData = importedData.filter(row => 
+                poNumbers.includes(row['Purchase Order Name'])
+            );
+            
+            if (filteredData.length === 0) {
+                showStatus('No data found for the specified PO numbers', 'error');
+                showLoading(false);
+                return;
+            }
+            
+            // Generate output according to Matrixify specifications
+            currentResults = filteredData.map(row => {
+                const dimensions = parseDimensions(row['Unit Dimension']);
+                const weight = convertToGrams(row['Unit Weight']);
+                
+                return {
+                    'Variant SKU': row['SKU'],
+                    'Variant Weight': weight,
+                    'Variant Command': 'UPDATE',
+                    'Variant Metafield: info.harmonized_system_code [single_line_text_field]': row['Shopify Product Type'],
+                    'Variant Metafield: info.dimensional_groups [single_line_text_field]': 'Default',
+                    'Variant Metafield: info.origins [single_line_text_field]': 'Main',
+                    'Variant Metafield: info.shipping_groups [single_line_text_field]': 'All Products not assigned to a Shipping Group',
+                    'Variant Metafield: info.length [single_line_text_field]': dimensions.length,
+                    'Variant Metafield: info.width [single_line_text_field]': dimensions.width,
+                    'Variant Metafield: info.height [single_line_text_field]': dimensions.height
+                };
+            });
+            
+            // Sort alphabetically by SKU
+            currentResults.sort((a, b) => a['Variant SKU'].localeCompare(b['Variant SKU']));
+            
+            displayResults(currentResults, 'Matrixify Tool Results');
+            showLoading(false);
+        }
+        
+        function generateReceivedOutput() {
+            if (importedData.length === 0) {
+                showStatus('Please import data first', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            const poNumbers = parsePONumbers(document.getElementById('poNumbersReceived').value);
+            
+            if (poNumbers.length === 0) {
+                showStatus('Please enter at least one PO number', 'error');
+                showLoading(false);
+                return;
+            }
+            
+            // Filter data by PO numbers
+            const filteredData = importedData.filter(row => 
+                poNumbers.includes(row['Purchase Order Name'])
+            );
+            
+            if (filteredData.length === 0) {
+                showStatus('No data found for the specified PO numbers', 'error');
+                showLoading(false);
+                return;
+            }
+            
+            // Generate output according to Received Inventories specifications
+            currentResults = filteredData.map(row => ({
+                'SKU': row['SKU'],
+                'Purchase Order Name': row['Purchase Order Name'],
+                'Title': row['Title'],
+                'QOH': row['QOH'],
+                'Statusv2': row['Statusv2']
+            }));
+            
+            // Sort alphabetically by SKU
+            currentResults.sort((a, b) => a['SKU'].localeCompare(b['SKU']));
+            
+            displayResults(currentResults, 'Received Inventories Results');
+            showLoading(false);
+        }
+        
+        function displayResults(data, title) {
+            if (data.length === 0) {
+                showStatus('No results to display', 'info');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('results');
+            const tableHeader = document.getElementById('tableHeader');
+            const tableBody = document.getElementById('tableBody');
+            const rowCount = document.getElementById('rowCount');
+            
+            // Clear previous results
+            tableHeader.innerHTML = '';
+            tableBody.innerHTML = '';
+            
+            // Create header
+            const headerRow = document.createElement('tr');
+            const headers = Object.keys(data[0]);
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            tableHeader.appendChild(headerRow);
+            
+            // Create body rows
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.textContent = row[header] || '';
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            });
+            
+            // Update row count
+            rowCount.textContent = `${title}: ${data.length} rows`;
+            
+            // Show results
+            resultsDiv.style.display = 'block';
+            showStatus(`${title} generated successfully with ${data.length} rows`, 'success');
+        }
+        
+        function exportToExcel(type) {
+            if (currentResults.length === 0) {
+                showStatus('No data to export. Please generate results first.', 'error');
+                return;
+            }
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(currentResults);
+            
+            // Auto-adjust column widths
+            const colWidths = [];
+            const headers = Object.keys(currentResults[0]);
+            headers.forEach((header, index) => {
+                let maxLength = header.length;
+                currentResults.forEach(row => {
+                    const value = row[header] ? row[header].toString() : '';
+                    if (value.length > maxLength) {
+                        maxLength = value.length;
+                    }
+                });
+                colWidths[index] = { wch: Math.min(maxLength + 2, 50) };
+            });
+            ws['!cols'] = colWidths;
+            
+            const filename = type === 'matrixify' ? 'SS_Import_Matrixify_Tool.xlsx' : 'Received_Inventories.xlsx';
+            XLSX.utils.book_append_sheet(wb, ws, type === 'matrixify' ? 'Matrixify Data' : 'Received Inventories');
+            XLSX.writeFile(wb, filename);
+            
+            showStatus(`Excel file "${filename}" downloaded successfully`, 'success');
+        }
+        
+        function clearData() {
+            importedData = [];
+            currentResults = [];
+            document.getElementById('dataInput').value = '';
+            document.getElementById('csvFile').value = '';
+            document.getElementById('poNumbers').value = '';
+            document.getElementById('poNumbersReceived').value = '';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('status').innerHTML = '';
+            showStatus('All data cleared', 'info');
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            // Auto-hide after 5 seconds for success/info messages
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 5000);
+            }
+        }
+        
+        function showLoading(show) {
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = show ? 'block' : 'none';
+        }
+        
+        // Initialize tool selection
+        document.getElementById('toolSelect').addEventListener('change', function() {
+            currentTool = this.value;
+            
+            // Show/hide appropriate sections
+            if (currentTool === 'matrixify') {
+                document.getElementById('matrixify-section').classList.add('active');
+                document.getElementById('received-section').classList.remove('active');
+            } else {
+                document.getElementById('received-section').classList.add('active');
+                document.getElementById('matrixify-section').classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
