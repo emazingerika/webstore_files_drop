@@ -314,8 +314,14 @@
             </div>
             
             <div class="input-group">
-                <label for="poNumbers">PO Numbers (separate multiple with comma, tab, or space):</label>
-                <input type="text" id="poNumbers" placeholder="PO001, PO002, PO003" />
+                <label for="poNumbers">PO Numbers (paste all at once - will auto-separate):</label>
+                <textarea id="poNumbers" placeholder="Paste your PO numbers here - any format works:
+PO001 PO002 PO003
+PO001, PO002, PO003  
+PO001
+PO002
+PO003" style="height: 80px;"></textarea>
+                <small style="color: #666; font-size: 12px;">Supports: spaces, commas, tabs, new lines, semicolons</small>
             </div>
             
             <button onclick="generateMatrixifyOutput()">Generate Matrixify Output</button>
@@ -327,8 +333,14 @@
         </button>
         <div id="received-section" class="section-content">
             <div class="input-group">
-                <label for="poNumbersReceived">PO Numbers (separate multiple with comma, tab, or space):</label>
-                <input type="text" id="poNumbersReceived" placeholder="PO001, PO002, PO003" />
+                <label for="poNumbersReceived">PO Numbers (paste all at once - will auto-separate):</label>
+                <textarea id="poNumbersReceived" placeholder="Paste your PO numbers here - any format works:
+PO001 PO002 PO003
+PO001, PO002, PO003  
+PO001
+PO002
+PO003" style="height: 80px;"></textarea>
+                <small style="color: #666; font-size: 12px;">Supports: spaces, commas, tabs, new lines, semicolons</small>
             </div>
             
             <button onclick="generateReceivedOutput()">Generate Received Inventories Output</button>
@@ -452,9 +464,46 @@
         
         function parsePONumbers(input) {
             if (!input) return [];
-            return input.split(/[,\s\t]+/)
-                       .map(po => po.trim())
-                       .filter(po => po.length > 0);
+            
+            // Handle various separators and formats
+            let poNumbers = [];
+            
+            // First, try to split by common delimiters
+            let parts = input.split(/[,;|\t\n\r]+/);
+            
+            // If that doesn't work well, try splitting by spaces but be smarter about it
+            if (parts.length === 1) {
+                // Split by multiple spaces or mixed separators
+                parts = input.split(/\s{2,}|[,;|\t\n\r]\s*|\s*[,;|\t\n\r]/);
+            }
+            
+            // If still one part, try splitting by single spaces
+            if (parts.length === 1) {
+                parts = input.split(/\s+/);
+            }
+            
+            // Clean up each part
+            parts.forEach(part => {
+                const cleaned = part.trim();
+                if (cleaned.length > 0) {
+                    // Check if this part contains multiple POs (like "PO001 PO002")
+                    if (cleaned.includes(' ') && !cleaned.includes(',')) {
+                        // Split by space if it looks like multiple POs
+                        const subParts = cleaned.split(/\s+/);
+                        subParts.forEach(subPart => {
+                            const subCleaned = subPart.trim();
+                            if (subCleaned.length > 0) {
+                                poNumbers.push(subCleaned);
+                            }
+                        });
+                    } else {
+                        poNumbers.push(cleaned);
+                    }
+                }
+            });
+            
+            // Remove duplicates and return
+            return [...new Set(poNumbers)].filter(po => po.length > 0);
         }
         
         function parseDimensions(dimensionString) {
@@ -496,13 +545,16 @@
                 return;
             }
             
+            // Show parsed PO numbers for verification
+            showStatus(`Processing ${poNumbers.length} PO numbers: ${poNumbers.join(', ')}`, 'info');
+            
             // Filter data by PO numbers
             const filteredData = importedData.filter(row => 
                 poNumbers.includes(row['Purchase Order Name'])
             );
             
             if (filteredData.length === 0) {
-                showStatus('No data found for the specified PO numbers', 'error');
+                showStatus(`No data found for PO numbers: ${poNumbers.join(', ')}. Please check your PO numbers and imported data.`, 'error');
                 showLoading(false);
                 return;
             }
@@ -548,13 +600,16 @@
                 return;
             }
             
+            // Show parsed PO numbers for verification
+            showStatus(`Processing ${poNumbers.length} PO numbers: ${poNumbers.join(', ')}`, 'info');
+            
             // Filter data by PO numbers
             const filteredData = importedData.filter(row => 
                 poNumbers.includes(row['Purchase Order Name'])
             );
             
             if (filteredData.length === 0) {
-                showStatus('No data found for the specified PO numbers', 'error');
+                showStatus(`No data found for PO numbers: ${poNumbers.join(', ')}. Please check your PO numbers and imported data.`, 'error');
                 showLoading(false);
                 return;
             }
