@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SS Import – Matrixify Tool</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+    h1 { font-size: 24px; }
+    textarea { width: 100%; height: 200px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 8px; text-align: left; font-size: 12px; }
+    .output { margin-top: 20px; }
+    .link-section { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>SS Import – Matrixify Tool</h1>
+
+  <div>
+    <label>Upload CSV File:</label>
+    <input type="file" id="csvFile" accept=".csv" />
+  </div>
+
+  <div style="margin-top: 10px">
+    <label>PO Number(s):</label>
+    <input type="text" id="poNumbers" placeholder="Enter PO Numbers separated by commas" style="width: 100%" />
+  </div>
+
+  <div style="margin-top: 10px">
+    <label>Select Tool:</label>
+    <select id="toolSelector">
+      <option value="matrixify">A Matrixify Tool</option>
+      <option value="received">B Received Inventories</option>
+    </select>
+  </div>
+
+  <div class="link-section">
+    <strong>Bulk Update to this link:</strong>
+    <ul>
+      <li><a href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">iHR: MATRIXIFY IMPORT</a></li>
+      <li><a href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">ITAM: MATRIXIFY IMPORT</a></li>
+    </ul>
+  </div>
+
+  <button onclick="processData()">Generate Template</button>
+  <button onclick="downloadExcel()">Download Excel</button>
+
+  <div class="output">
+    <table id="outputTable"></table>
+  </div>
+
+  <script>
+    let parsedData = [];
+
+    document.getElementById('csvFile').addEventListener('change', function (e) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        parsedData = XLSX.utils.sheet_to_json(sheet);
+      };
+      reader.readAsArrayBuffer(e.target.files[0]);
+    });
+
+    function processData() {
+      const poInput = document.getElementById('poNumbers').value;
+      const tool = document.getElementById('toolSelector').value;
+      const pos = poInput.split(/[,\n\t ]+/).map(p => p.trim());
+      const results = [];
+
+      if (tool === 'matrixify') {
+        parsedData.forEach(row => {
+          if (pos.includes(row['Purchase Order: Purchase Order Name'])) {
+            const [length, width, height] = (row['Unit Dimension'] || '').split('x').map(d => d.trim());
+            const weight = Math.round(parseFloat(row['Unit Weight'] || 0) * 1000);
+            results.push({
+              'Variant SKU': row['SKU'],
+              'Variant Weight': weight,
+              'Variant Command': 'UPDATE',
+              'Variant Metafield: info.harmonized_system_code [single_line_text_field]': row['Shopify Product Type'],
+              'Variant Metafield: info.dimensional_groups [single_line_text_field]': 'Default',
+              'Variant Metafield: info.origins [single_line_text_field]': 'Main',
+              'Variant Metafield: info.shipping_groups [single_line_text_field]': 'All Products not assigned to a Shipping Group',
+              'Variant Metafield: info.length [single_line_text_field]': length,
+              'Variant Metafield: info.width [single_line_text_field]': width,
+              'Variant Metafield: info.height [single_line_text_field]': height
+            });
+          }
+        });
+      } else {
+        parsedData.forEach(row => {
+          if (pos.includes(row['Purchase Order: Purchase Order Name'])) {
+            results.push({
+              'SKU': row['SKU'],
+              'Purchase Order: Purchase Order Name': row['Purchase Order: Purchase Order Name'],
+              'Title': row['Title'],
+              'QOH': row['Quantity On Hand'],
+              'StatusV2': row['Statusv2']
+            });
+          }
+        });
+      }
+
+      results.sort((a, b) => (a['SKU'] || a['Variant SKU']).localeCompare(b['SKU'] || b['Variant SKU']));
+      renderTable(results);
+      window.generatedResults = results;
+    }
+
+    function renderTable(data) {
+      const table = document.getElementById('outputTable');
+      table.innerHTML = '';
+      if (data.length === 0) return;
+      const headers = Object.keys(data[0]);
+      const thead = table.insertRow();
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.innerText = h;
+        thead.appendChild(th);
+      });
+      data.forEach(row => {
+        const tr = table.insertRow();
+        headers.forEach(h => {
+          const td = tr.insertCell();
+          td.innerText = row[h] || '';
+        });
+      });
+    }
+
+    function downloadExcel() {
+      if (!window.generatedResults || window.generatedResults.length === 0) return alert('No data to download');
+      const worksheet = XLSX.utils.json_to_sheet(window.generatedResults);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Results');
+      XLSX.writeFile(workbook, 'ss_import_output.xlsx');
+    }
+  </script>
+</body>
+</html>
