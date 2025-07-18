@@ -336,6 +336,9 @@
                 <div class="input-group">
                     <label for="poNumbers">PO Numbers (comma, tab, or space separated):</label>
                     <input type="text" id="poNumbers" placeholder="Enter PO numbers separated by commas, tabs, or spaces">
+                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                        <strong>Debug Info:</strong> Check browser console (F12) for detailed filtering information
+                    </p>
                 </div>
             </div>
 
@@ -508,48 +511,67 @@
             if (!poNumbers || poNumbers.trim() === '') return data;
             
             const poList = poNumbers.split(/[,\t\s\n\r]+/).filter(po => po.trim() !== '').map(po => po.trim().toLowerCase());
+            console.log('=== PO FILTERING DEBUG ===');
             console.log('PO List to filter:', poList);
             
             // Check what column names are available
             if (data.length > 0) {
                 console.log('Available columns:', Object.keys(data[0]));
+                console.log('Sample first row:', data[0]);
             }
             
             const filteredData = data.filter(row => {
                 // Try multiple possible column names for purchase order
                 const purchaseOrderFields = [
                     'Purchase Order Name',
+                    'Purchase Order: Purchase Order Name',
                     'Purchase Order',
                     'PO Number',
                     'PO Name',
-                    'Purchase Order: Purchase Order Name'
+                    'PO'
                 ];
+                
+                let foundMatch = false;
                 
                 for (let field of purchaseOrderFields) {
                     if (row[field]) {
-                        const purchaseOrder = row[field].toLowerCase();
-                        console.log(`Checking ${field}: "${purchaseOrder}" against PO list`);
+                        const purchaseOrder = String(row[field]).toLowerCase().trim();
                         
                         const matches = poList.some(po => {
                             // Try exact match first
-                            if (purchaseOrder === po) return true;
+                            if (purchaseOrder === po) {
+                                console.log(`✓ EXACT MATCH - ${field}: "${purchaseOrder}" === "${po}"`);
+                                return true;
+                            }
                             // Then try contains match
-                            if (purchaseOrder.includes(po)) return true;
+                            if (purchaseOrder.includes(po)) {
+                                console.log(`✓ CONTAINS MATCH - ${field}: "${purchaseOrder}" contains "${po}"`);
+                                return true;
+                            }
                             // Then try if PO contains the purchase order
-                            if (po.includes(purchaseOrder)) return true;
+                            if (po.includes(purchaseOrder)) {
+                                console.log(`✓ REVERSE MATCH - "${po}" contains ${field}: "${purchaseOrder}"`);
+                                return true;
+                            }
                             return false;
                         });
                         
                         if (matches) {
-                            console.log(`Match found for ${field}: "${purchaseOrder}"`);
-                            return true;
+                            foundMatch = true;
+                            break;
+                        } else {
+                            console.log(`✗ NO MATCH - ${field}: "${purchaseOrder}" vs PO list:`, poList);
                         }
                     }
                 }
-                return false;
+                
+                return foundMatch;
             });
             
+            console.log(`=== FILTERING RESULT ===`);
             console.log(`Filtered ${filteredData.length} records from ${data.length} total records`);
+            console.log('=========================');
+            
             return filteredData;
         }
 
@@ -560,8 +582,11 @@
                 const dimensions = parseDimensions(row['Unit Dimension']);
                 const weightInGrams = convertToGrams(row['Unit Weight']);
                 
+                // Try multiple possible SKU field names
+                const skuValue = row['SKU'] || row['B2C Product: SKU'] || row['Variant SKU'] || '';
+                
                 const result = {
-                    'Variant SKU': row['SKU'] || '',
+                    'Variant SKU': skuValue,
                     'Variant Weight': weightInGrams,
                     'Variant Command': 'UPDATE',
                     'Variant Metafield: info.harmonized_system_code [single_line_text_field]': row['Shopify Product Type'] || '',
@@ -573,11 +598,19 @@
                     'Variant Metafield: info.height [single_line_text_field]': dimensions.height
                 };
                 
+                console.log('Processing row with SKU:', skuValue, 'from fields:', {
+                    'SKU': row['SKU'],
+                    'B2C Product: SKU': row['B2C Product: SKU'], 
+                    'Variant SKU': row['Variant SKU']
+                });
+                
                 results.push(result);
             });
             
             // Sort by SKU alphabetically
             results.sort((a, b) => (a['Variant SKU'] || '').localeCompare(b['Variant SKU'] || ''));
+            
+            console.log('Processed results with SKUs:', results.map(r => r['Variant SKU']));
             
             return results;
         }
@@ -665,12 +698,26 @@
                 setTimeout(() => {
                     try {
                         const rawData = parseCSV(csvText);
-                        const filteredData = filterDataByPO(rawData, poNumbers);
+                        console.log('Raw data loaded:', rawData.length, 'records');
                         
-                        if (filteredData.length === 0) {
-                            showError('No data found matching the specified PO numbers.');
-                            showLoading(false);
-                            return;
+                        // Always filter by PO if PO numbers are provided
+                        let filteredData;
+                        if (poNumbers && poNumbers.trim() !== '') {
+                            filteredData = filterDataByPO(rawData, poNumbers);
+                            console.log('After PO filtering:', filteredData.length, 'records');
+                            
+                            if (filteredData.length === 0) {
+                                showError(`No data found matching the PO numbers: "${poNumbers}". Check the browser console (F12) for detailed debugging information.`);
+                                showLoading(false);
+                                return;
+                            }
+                        } else {
+                            // If no PO numbers provided, ask user to confirm
+                            if (!confirm('No PO numbers entered. This will process ALL data in the file. Do you want to continue?')) {
+                                showLoading(false);
+                                return;
+                            }
+                            filteredData = rawData;
                         }
                         
                         if (currentTool === 'matrixify') {
@@ -680,7 +727,9 @@
                         }
                         
                         displayResults(processedData);
-                        showSuccess(`Successfully processed ${processedData.length} records.`);
+                        
+                        const poMessage = poNumbers ? ` (filtered by PO: ${poNumbers})` : ' (all data - no PO filter)';
+                        showSuccess(`Successfully processed ${processedData.length} records${poMessage}.`);
                         showLoading(false);
                     } catch (error) {
                         showError('Error processing data: ' + error.message);
