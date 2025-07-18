@@ -442,15 +442,42 @@
             const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
             const data = [];
 
+            console.log('CSV Headers found:', headers);
+
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-                if (values.length === headers.length) {
+                const line = lines[i];
+                if (!line.trim()) continue; // Skip empty lines
+                
+                // Handle CSV parsing with quoted values
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                values.push(current.trim()); // Add the last value
+                
+                if (values.length >= headers.length) {
                     const row = {};
                     headers.forEach((header, index) => {
-                        row[header] = values[index];
+                        row[header] = values[index] || '';
                     });
                     data.push(row);
                 }
+            }
+
+            console.log(`Parsed ${data.length} rows from CSV`);
+            if (data.length > 0) {
+                console.log('First row sample:', data[0]);
             }
 
             return data;
@@ -480,11 +507,50 @@
         function filterDataByPO(data, poNumbers) {
             if (!poNumbers || poNumbers.trim() === '') return data;
             
-            const poList = poNumbers.split(/[,\t\s]+/).map(po => po.trim().toLowerCase());
-            return data.filter(row => {
-                const purchaseOrder = (row['Purchase Order Name'] || '').toLowerCase();
-                return poList.some(po => purchaseOrder.includes(po));
+            const poList = poNumbers.split(/[,\t\s\n\r]+/).filter(po => po.trim() !== '').map(po => po.trim().toLowerCase());
+            console.log('PO List to filter:', poList);
+            
+            // Check what column names are available
+            if (data.length > 0) {
+                console.log('Available columns:', Object.keys(data[0]));
+            }
+            
+            const filteredData = data.filter(row => {
+                // Try multiple possible column names for purchase order
+                const purchaseOrderFields = [
+                    'Purchase Order Name',
+                    'Purchase Order',
+                    'PO Number',
+                    'PO Name',
+                    'Purchase Order: Purchase Order Name'
+                ];
+                
+                for (let field of purchaseOrderFields) {
+                    if (row[field]) {
+                        const purchaseOrder = row[field].toLowerCase();
+                        console.log(`Checking ${field}: "${purchaseOrder}" against PO list`);
+                        
+                        const matches = poList.some(po => {
+                            // Try exact match first
+                            if (purchaseOrder === po) return true;
+                            // Then try contains match
+                            if (purchaseOrder.includes(po)) return true;
+                            // Then try if PO contains the purchase order
+                            if (po.includes(purchaseOrder)) return true;
+                            return false;
+                        });
+                        
+                        if (matches) {
+                            console.log(`Match found for ${field}: "${purchaseOrder}"`);
+                            return true;
+                        }
+                    }
+                }
+                return false;
             });
+            
+            console.log(`Filtered ${filteredData.length} records from ${data.length} total records`);
+            return filteredData;
         }
 
         function processMatrixifyData(data) {
