@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SS Import – Matrixify Tool v2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { font-size: 1.5em; }
+        .container { max-width: 1200px; margin: auto; }
+        .section { margin-bottom: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        table, th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+        select, input, button, textarea { margin-top: 10px; padding: 6px; width: 100%; }
+        .links { margin-bottom: 15px; }
+        .preview { font-size: 0.9em; margin-top: 5px; color: green; }
+        .error { color: red; font-weight: bold; margin-top: 5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>SS Import Tool v2</h1>
+    <div class="section">
+        <label for="toolSelect">Choose Tool:</label>
+        <select id="toolSelect">
+            <option value="matrixify">A: SS Import – Matrixify Tool</option>
+            <option value="received">B: Received Inventories Tool</option>
+        </select>
+    </div>
+    <div class="section">
+        <label for="fileInput">Upload CSV Data:</label>
+        <input type="file" id="fileInput" accept=".csv">
+        <div id="fileStatus" class="preview"></div>
+    </div>
+    <div class="section">
+        <label for="poInput">Enter PO Numbers (comma, tab, or newline separated):</label>
+        <textarea id="poInput" rows="3"></textarea>
+    </div>
+    <button onclick="processData()">Generate</button>
+    <button onclick="generateAgain()">Generate Again</button>
+    <div id="errorBox" class="error"></div>
+    <div class="links">
+        <p><b>Bulk Update to this link: MATRIXIFY IMPORT</b></p>
+        <p>iHR: <a href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">Matrixify Import</a></p>
+        <p>ITAM: <a href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">Matrixify Import</a></p>
+    </div>
+    <div id="output"></div>
+    <button id="downloadCsvBtn" style="display:none;" onclick="downloadCSV()">Download CSV</button>
+    <button id="downloadXlsxBtn" style="display:none;" onclick="downloadXLSX()">Download XLSX</button>
+</div>
+<script>
+let parsedData = [];
+let filteredData = [];
+let headersMap = {};
+
+function normalizeHeaders(row) {
+    let normalized = {};
+    Object.keys(row).forEach(k => {
+        normalized[k.trim().toLowerCase()] = row[k];
+    });
+    return normalized;
+}
+
+function generateAgain() {
+    document.getElementById('output').innerHTML = '';
+    document.getElementById('errorBox').innerText = '';
+    document.getElementById('downloadCsvBtn').style.display = 'none';
+    document.getElementById('downloadXlsxBtn').style.display = 'none';
+}
+
+document.getElementById('fileInput').addEventListener('change', function(event) {
+    Papa.parse(event.target.files[0], {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            parsedData = results.data.map(normalizeHeaders);
+            if (parsedData.length > 0) {
+                let preview = parsedData.slice(0, 5);
+                document.getElementById('fileStatus').innerText = "Loaded " + parsedData.length + " rows. Preview first rows: " + JSON.stringify(preview, null, 2);
+            } else {
+                document.getElementById('fileStatus').innerText = "No rows found in file.";
+            }
+        }
+    });
+});
+
+function processData() {
+    document.getElementById('errorBox').innerText = '';
+    if (parsedData.length === 0) {
+        document.getElementById('errorBox').innerText = "Please upload a CSV file first.";
+        return;
+    }
+    let poNumbers = document.getElementById('poInput').value
+        .split(/[\n,\t, ]+/)
+        .map(s => s.trim())
+        .filter(s => s);
+    if (poNumbers.length === 0) {
+        document.getElementById('errorBox').innerText = "Please enter at least one PO Number.";
+        return;
+    }
+    function findField(row, name) {
+        return row[name.toLowerCase()] || "";
+    }
+    filteredData = parsedData.filter(row => poNumbers.includes(findField(row, "purchase order")));
+    if (filteredData.length === 0) {
+        document.getElementById('errorBox').innerText = "No rows matched the given PO Numbers.";
+        return;
+    }
+    let tool = document.getElementById('toolSelect').value;
+    if (tool === "matrixify") {
+        filteredData = filteredData.map(row => {
+            let dimensions = findField(row, "unit dimension").split("x").map(s => s.trim());
+            let weightGrams = Math.round(parseFloat(findField(row, "unit weight") || "0") * 1000);
+            return {
+                "Variant SKU": findField(row, "sku"),
+                "Variant Weight": weightGrams,
+                "Variant Command": "UPDATE",
+                "Variant Metafield: info.harmonized_system_code [single_line_text_field]": findField(row, "shopify product type"),
+                "Variant Metafield: info.dimensional_groups [single_line_text_field]": "Default",
+                "Variant Metafield: info.origins [single_line_text_field]": "Main",
+                "Variant Metafield: info.shipping_groups [single_line_text_field]": "All Products not assigned to a Shipping Group",
+                "Variant Metafield: info.length [single_line_text_field]": dimensions[0] || "",
+                "Variant Metafield: info.width [single_line_text_field]": dimensions[1] || "",
+                "Variant Metafield: info.height [single_line_text_field]": dimensions[2] || "",
+                "Quantity On Hand": findField(row, "qoh"),
+                "Primary Location": findField(row, "primary location"),
+                "Statusv2": findField(row, "statusv2")
+            };
+        });
+        filteredData.sort((a, b) => a["Variant SKU"].localeCompare(b["Variant SKU"]));
+    } else {
+        filteredData = filteredData.map(row => ({
+            "Purchase Order": findField(row, "purchase order"),
+            "SKU": findField(row, "sku"),
+            "Title": findField(row, "title"),
+            "QOH": findField(row, "qoh"),
+            "Statusv2": findField(row, "statusv2")
+        }));
+    }
+    displayTable(filteredData);
+    document.getElementById('downloadCsvBtn').style.display = 'inline-block';
+    document.getElementById('downloadXlsxBtn').style.display = 'inline-block';
+}
+
+function displayTable(data) {
+    let output = "<table><thead><tr>";
+    Object.keys(data[0]).forEach(key => output += `<th>${key}</th>`);
+    output += "</tr></thead><tbody>";
+    data.forEach(row => {
+        output += "<tr>";
+        Object.values(row).forEach(val => output += `<td>${val}</td>`);
+        output += "</tr>";
+    });
+    output += "</tbody></table>";
+    document.getElementById('output').innerHTML = output;
+}
+
+function downloadCSV() {
+    let csv = Papa.unparse(filteredData);
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "output.csv";
+    link.click();
+}
+
+function downloadXLSX() {
+    let ws = XLSX.utils.json_to_sheet(filteredData);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, "output.xlsx");
+}
+</script>
+</body>
+</html>
