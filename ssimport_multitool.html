@@ -1,789 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SS Import - Matrixify Tool</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .content {
-            padding: 40px;
-        }
-
-        .tool-selector {
-            margin-bottom: 30px;
-        }
-
-        .tool-selector select {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            background: white;
-            transition: all 0.3s ease;
-        }
-
-        .tool-selector select:focus {
-            outline: none;
-            border-color: #4facfe;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
-        }
-
-        .input-section {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            border: 2px solid #e9ecef;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .input-group input,
-        .input-group textarea {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .input-group input:focus,
-        .input-group textarea:focus {
-            outline: none;
-            border-color: #4facfe;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
-        }
-
-        .file-upload {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .file-upload input[type=file] {
-            position: absolute;
-            left: -9999px;
-        }
-
-        .file-upload-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-
-        .file-upload-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .buttons {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .btn {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            flex: 1;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .links-section {
-            background: #fff3cd;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            border: 2px solid #ffeaa7;
-        }
-
-        .links-section h3 {
-            color: #856404;
-            margin-bottom: 15px;
-        }
-
-        .links-section a {
-            color: #007bff;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .links-section a:hover {
-            text-decoration: underline;
-        }
-
-        .output-section {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            border: 2px solid #e9ecef;
-        }
-
-        .table-container {
-            max-height: 600px;
-            overflow: auto;
-            border-radius: 10px;
-            border: 1px solid #dee2e6;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #dee2e6;
-            font-size: 14px;
-        }
-
-        th {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .download-section {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 2px solid #f5c6cb;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 2px solid #c3e6cb;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #4facfe;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 768px) {
-            .content {
-                padding: 20px;
-            }
-            
-            .buttons {
-                flex-direction: column;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SS Import – Matrixify Tool</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea, input, button, select { width: 100%; margin: 10px 0; padding: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .instructions { background-color: #f4f4f4; padding: 10px; margin-bottom: 20px; }
+    .error { color: red; font-weight: bold; }
+    .download-buttons { margin-top: 10px; }
+    .download-buttons button { width: 48%; display: inline-block; margin-right: 4%; }
+    .download-buttons button:last-child { margin-right: 0; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>SS Import - Matrixify Tool</h1>
-            <p>Advanced data processing tool for Shopify inventory management</p>
-        </div>
+  <h1>SS Import – Matrixify Tool</h1>
+  <div class="instructions">
+    <p><strong>Instructions:</strong></p>
+    <ul>
+      <li>Enter PO numbers manually or upload an Excel (.xlsx) file containing your data.</li>
+      <li>Refer to report: <a href="https://emazing.my.salesforce.com/00O3r000006mGeP" target="_blank">Salesforce Report</a></li>
+    </ul>
+  </div>
 
-        <div class="content">
-            <div class="tool-selector">
-                <label for="toolSelect">Select Tool:</label>
-                <select id="toolSelect">
-                    <option value="matrixify">SS Import - Matrixify Tool</option>
-                    <option value="inventory">B Received Inventories Tool</option>
-                </select>
-            </div>
+  <label for="toolMode">Select Tool Mode:</label>
+  <select id="toolMode" onchange="toggleMode()">
+    <option value="A">A - Matrixify Import (Default)</option>
+    <option value="B">B - Received Inventories</option>
+  </select>
 
-            <div class="input-section">
-                <div class="input-group">
-                    <label for="csvFile">Upload CSV File:</label>
-                    <div class="file-upload">
-                        <input type="file" id="csvFile" accept=".csv" />
-                        <button class="file-upload-btn" onclick="document.getElementById('csvFile').click();">
-                            Choose CSV File
-                        </button>
-                    </div>
-                </div>
+  <label for="poNumber">Enter PO Number(s) (separated by commas, tabs, or line breaks):</label>
+  <textarea id="poNumber" placeholder="e.g. PO1234, PO5678">PO1001</textarea>
 
-                <div class="input-group">
-                    <label for="csvData">Or Paste CSV Data:</label>
-                    <textarea id="csvData" rows="10" placeholder="Paste your CSV data here..."></textarea>
-                </div>
+  <label for="excelInput">Upload an Excel (.xlsx) file with your data:</label>
+  <input type="file" id="excelInput" accept=".xlsx" />
 
-                <div class="input-group" id="salesforceSection">
-                    <label for="salesforceUrl">Or Load from Salesforce Report:</label>
-                    <input type="text" id="salesforceUrl" value="https://emazing.my.salesforce.com/00O3r000006mGeP" placeholder="Salesforce report URL">
-                    <button class="btn btn-secondary" onclick="loadSalesforceData()" style="margin-top: 10px; width: 100%;">Load Data from Salesforce Report</button>
-                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
-                        <strong>Note:</strong> Due to browser security restrictions, you may need to manually export the data from Salesforce and upload it as a CSV file instead.
-                    </p>
-                </div>
+  <button onclick="processData()">Generate Output</button>
 
-                <div class="input-group">
-                    <label for="poNumbers">PO Numbers (comma, tab, or space separated):</label>
-                    <input type="text" id="poNumbers" placeholder="Enter PO numbers separated by commas, tabs, or spaces">
-                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
-                        <strong>Debug Info:</strong> Check browser console (F12) for detailed filtering information
-                    </p>
-                </div>
-            </div>
+  <div>
+    <p><strong>Bulk Update to this link:</strong></p>
+    <ul>
+      <li><a href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">iHR: MATRIXIFY IMPORT</a></li>
+      <li><a href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">ITAM: MATRIXIFY IMPORT</a></li>
+    </ul>
+  </div>
 
-            <div class="links-section">
-                <h3>Bulk Update Links:</h3>
-                <p><strong>MATRIXIFY IMPORT</strong></p>
-                <p>iHR: <a href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">https://admin.shopify.com/store/iheartraves/apps/excel-export-import</a></p>
-                <p>ITAM: <a href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">https://admin.shopify.com/store/into-the-am/apps/excel-export-import</a></p>
-            </div>
+  <div id="output"></div>
+  <div class="download-buttons" id="downloadButtons" style="display:none;">
+    <button onclick="downloadCSV()">Download CSV</button>
+    <button onclick="downloadExcel()">Download Excel</button>
+  </div>
 
-            <div class="buttons">
-                <button class="btn btn-primary" onclick="processData()">Process Data</button>
-                <button class="btn btn-secondary" onclick="generateAgain()">Generate Again</button>
-            </div>
+  <script>
+    let parsedData = [];
 
-            <div id="output" class="output-section hidden">
-                <h3>Results</h3>
-                <div id="loadingIndicator" class="loading hidden">
-                    <div class="spinner"></div>
-                    <p>Processing data...</p>
-                </div>
-                <div id="resultsTable" class="table-container"></div>
-                <div class="download-section">
-                    <button class="btn btn-primary" onclick="downloadCSV()">Download CSV</button>
-                    <button class="btn btn-secondary" onclick="downloadXLSX()">Download XLSX</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    document.getElementById('excelInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        parsedData = json;
+        alert('Excel file loaded successfully. Now click "Generate Output".');
+      };
+      reader.readAsArrayBuffer(file);
+    });
 
-    <script>
-        let processedData = [];
-        let currentTool = 'matrixify';
+    function toggleMode() {
+      // Clear any existing output when switching modes
+      document.getElementById('output').innerHTML = '';
+      document.getElementById('downloadButtons').style.display = 'none';
+    }
 
-        function loadSalesforceData() {
-            const salesforceUrl = document.getElementById('salesforceUrl').value.trim();
-            
-            if (!salesforceUrl) {
-                showError('Please provide a Salesforce report URL.');
-                return;
-            }
+    function processData() {
+      const toolMode = document.getElementById('toolMode').value;
+      
+      if (toolMode === 'A') {
+        processMatrixifyData();
+      } else if (toolMode === 'B') {
+        processReceivedInventories();
+      }
+    }
 
-            showLoading(true);
-            document.getElementById('output').classList.remove('hidden');
+    function processMatrixifyData() {
+      const poInput = document.getElementById('poNumber').value;
+      const poNumbers = poInput.split(/[,	\n]+/).map(p => p.trim()).filter(p => p);
+      
+      if (parsedData.length === 0) {
+        document.getElementById('output').innerHTML = '<p class="error">Please upload an Excel file first.</p>';
+        document.getElementById('downloadButtons').style.display = 'none';
+        return;
+      }
 
-            // Attempt to fetch data from Salesforce (this may fail due to CORS)
-            fetch(salesforceUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Unable to access Salesforce report directly due to security restrictions');
-                    }
-                    return response.text();
-                })
-                .then(data => {
-                    document.getElementById('csvData').value = data;
-                    showSuccess('Data loaded from Salesforce report successfully!');
-                    showLoading(false);
-                })
-                .catch(error => {
-                    showLoading(false);
-                    showError('Unable to load data directly from Salesforce due to browser security restrictions. Please manually export the report as CSV and upload it using the file upload option above.');
-                    
-                    // Provide helpful instructions
-                    const instructionsDiv = document.createElement('div');
-                    instructionsDiv.className = 'success';
-                    instructionsDiv.innerHTML = `
-                        <h4>How to export from Salesforce:</h4>
-                        <ol style="margin-left: 20px; margin-top: 10px;">
-                            <li>Open the Salesforce report: <a href="${salesforceUrl}" target="_blank">Click here</a></li>
-                            <li>Click "Export" or "Export Details" in the report</li>
-                            <li>Choose "CSV" format</li>
-                            <li>Save the file and upload it using the "Choose CSV File" button above</li>
-                        </ol>
-                    `;
-                    document.querySelector('.content').insertBefore(instructionsDiv, document.getElementById('output'));
-                    setTimeout(() => instructionsDiv.remove(), 15000);
-                });
-        }
+      const matchedData = parsedData.filter(d => poNumbers.includes(d["Purchase Order: Purchase Order Name"]));
+      if (matchedData.length === 0) {
+        document.getElementById('output').innerHTML = '<p class="error">No matching PO Numbers found. Check your input.</p>';
+        document.getElementById('downloadButtons').style.display = 'none';
+        return;
+      }
 
-        document.getElementById('toolSelect').addEventListener('change', function() {
-            currentTool = this.value;
-            // Show/hide Salesforce section based on tool selection
-            const salesforceSection = document.getElementById('salesforceSection');
-            if (currentTool === 'matrixify') {
-                salesforceSection.style.display = 'block';
-            } else {
-                salesforceSection.style.display = 'none';
-            }
-        });
+      const output = matchedData.map(d => {
+        const [length, width, height] = (d["Unit Dimension"] || '').split('x').map(n => parseFloat(n) || '');
+        const weightGrams = Math.round(parseFloat(d["Unit Weight"] || 0) * 28.3495);
+        return {
+          "Variant SKU": d["B2C Product: SKU"],
+          "Variant Weight": weightGrams,
+          "Variant Command": "UPDATE",
+          "Variant Metafield: info.harmonized_system_code [single_line_text_field]": d["Shopify Product Type"],
+          "Variant Metafield: info.dimensional_groups [single_line_text_field]": "Default",
+          "Variant Metafield: info.origins [single_line_text_field]": "Main",
+          "Variant Metafield: info.shipping_groups [single_line_text_field]": "All Products not assigned to a Shipping Group",
+          "Variant Metafield: info.length [single_line_text_field]": length,
+          "Variant Metafield: info.width [single_line_text_field]": width,
+          "Variant Metafield: info.height [single_line_text_field]": height
+        };
+      });
 
-        document.getElementById('csvFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('csvData').value = e.target.result;
-                };
-                reader.readAsText(file);
-            }
-        });
+      displayTable(output);
+    }
 
-        function parseCSV(csvText) {
-            const lines = csvText.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-            const data = [];
+    function processReceivedInventories() {
+      const poInput = document.getElementById('poNumber').value;
+      const poNumbers = poInput.split(/[,	\n]+/).map(p => p.trim()).filter(p => p);
+      
+      if (parsedData.length === 0) {
+        document.getElementById('output').innerHTML = '<p class="error">Please upload an Excel file first.</p>';
+        document.getElementById('downloadButtons').style.display = 'none';
+        return;
+      }
 
-            console.log('CSV Headers found:', headers);
+      const matchedData = parsedData.filter(d => poNumbers.includes(d["Purchase Order: Purchase Order Name"]));
+      if (matchedData.length === 0) {
+        document.getElementById('output').innerHTML = '<p class="error">No matching PO Numbers found. Check your input.</p>';
+        document.getElementById('downloadButtons').style.display = 'none';
+        return;
+      }
 
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i];
-                if (!line.trim()) continue; // Skip empty lines
-                
-                // Handle CSV parsing with quoted values
-                const values = [];
-                let current = '';
-                let inQuotes = false;
-                
-                for (let j = 0; j < line.length; j++) {
-                    const char = line[j];
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        values.push(current.trim());
-                        current = '';
-                    } else {
-                        current += char;
-                    }
-                }
-                values.push(current.trim()); // Add the last value
-                
-                if (values.length >= headers.length) {
-                    const row = {};
-                    headers.forEach((header, index) => {
-                        row[header] = values[index] || '';
-                    });
-                    data.push(row);
-                }
-            }
+      const output = matchedData.map(d => {
+        return {
+          "Purchase Order: Purchase Order Name": d["Purchase Order: Purchase Order Name"],
+          "SKU": d["B2C Product: SKU"],
+          "Title": d["Title"],
+          "QOH": d["Quantity On Hand"],
+          "Statusv2": d["Statusv2"],
+          "Primary Location": d["Primary Location"],
+          "Unit Weight": d["Unit Weight"]
+        };
+      });
 
-            console.log(`Parsed ${data.length} rows from CSV`);
-            if (data.length > 0) {
-                console.log('First row sample:', data[0]);
-            }
+      displayTable(output);
+    }
 
-            return data;
-        }
+    function displayTable(output) {
 
-        function parseDimensions(dimensions) {
-            if (!dimensions) return { length: '', width: '', height: '' };
-            
-            const parts = dimensions.split('x').map(d => d.trim());
-            return {
-                length: parts[0] || '',
-                width: parts[1] || '',
-                height: parts[2] || ''
-            };
-        }
+    function downloadCSV() {
+      const { headers, rows } = window.generatedData;
+      const toolMode = document.getElementById('toolMode').value;
+      const filename = toolMode === 'A' ? 'ss_import_matrixify_output.csv' : 'received_inventories_output.csv';
+      
+      let csv = headers.join(',') + "\n" +
+        rows.map(row => headers.map(h => `"${row[h]}"`).join(',')).join("\n");
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+    }
 
-        function convertToGrams(weight) {
-            if (!weight) return '';
-            
-            const weightNum = parseFloat(weight);
-            if (isNaN(weightNum)) return '';
-            
-            // Assuming weight is in pounds, convert to grams
-            return Math.round(weightNum * 453.592);
-        }
-
-        function filterDataByPO(data, poNumbers) {
-            if (!poNumbers || poNumbers.trim() === '') return data;
-            
-            const poList = poNumbers.split(/[,\t\s\n\r]+/).filter(po => po.trim() !== '').map(po => po.trim().toLowerCase());
-            console.log('=== PO FILTERING DEBUG ===');
-            console.log('PO List to filter:', poList);
-            
-            // Check what column names are available
-            if (data.length > 0) {
-                console.log('Available columns:', Object.keys(data[0]));
-                console.log('Sample first row:', data[0]);
-            }
-            
-            const filteredData = data.filter(row => {
-                // Try multiple possible column names for purchase order
-                const purchaseOrderFields = [
-                    'Purchase Order Name',
-                    'Purchase Order: Purchase Order Name',
-                    'Purchase Order',
-                    'PO Number',
-                    'PO Name',
-                    'PO'
-                ];
-                
-                let foundMatch = false;
-                
-                for (let field of purchaseOrderFields) {
-                    if (row[field]) {
-                        const purchaseOrder = String(row[field]).toLowerCase().trim();
-                        
-                        const matches = poList.some(po => {
-                            // Try exact match first
-                            if (purchaseOrder === po) {
-                                console.log(`✓ EXACT MATCH - ${field}: "${purchaseOrder}" === "${po}"`);
-                                return true;
-                            }
-                            // Then try contains match
-                            if (purchaseOrder.includes(po)) {
-                                console.log(`✓ CONTAINS MATCH - ${field}: "${purchaseOrder}" contains "${po}"`);
-                                return true;
-                            }
-                            // Then try if PO contains the purchase order
-                            if (po.includes(purchaseOrder)) {
-                                console.log(`✓ REVERSE MATCH - "${po}" contains ${field}: "${purchaseOrder}"`);
-                                return true;
-                            }
-                            return false;
-                        });
-                        
-                        if (matches) {
-                            foundMatch = true;
-                            break;
-                        } else {
-                            console.log(`✗ NO MATCH - ${field}: "${purchaseOrder}" vs PO list:`, poList);
-                        }
-                    }
-                }
-                
-                return foundMatch;
-            });
-            
-            console.log(`=== FILTERING RESULT ===`);
-            console.log(`Filtered ${filteredData.length} records from ${data.length} total records`);
-            console.log('=========================');
-            
-            return filteredData;
-        }
-
-        function processMatrixifyData(data) {
-            const results = [];
-            
-            data.forEach(row => {
-                const dimensions = parseDimensions(row['Unit Dimension']);
-                const weightInGrams = convertToGrams(row['Unit Weight']);
-                
-                // Try multiple possible SKU field names
-                const skuValue = row['SKU'] || row['B2C Product: SKU'] || row['Variant SKU'] || '';
-                
-                const result = {
-                    'Variant SKU': skuValue,
-                    'Variant Weight': weightInGrams,
-                    'Variant Command': 'UPDATE',
-                    'Variant Metafield: info.harmonized_system_code [single_line_text_field]': row['Shopify Product Type'] || '',
-                    'Variant Metafield: info.dimensional_groups [single_line_text_field]': 'Default',
-                    'Variant Metafield: info.origins [single_line_text_field]': 'Main',
-                    'Variant Metafield: info.shipping_groups [single_line_text_field]': 'All Products not assigned to a Shipping Group',
-                    'Variant Metafield: info.length [single_line_text_field]': dimensions.length,
-                    'Variant Metafield: info.width [single_line_text_field]': dimensions.width,
-                    'Variant Metafield: info.height [single_line_text_field]': dimensions.height
-                };
-                
-                console.log('Processing row with SKU:', skuValue, 'from fields:', {
-                    'SKU': row['SKU'],
-                    'B2C Product: SKU': row['B2C Product: SKU'], 
-                    'Variant SKU': row['Variant SKU']
-                });
-                
-                results.push(result);
-            });
-            
-            // Sort by SKU alphabetically
-            results.sort((a, b) => (a['Variant SKU'] || '').localeCompare(b['Variant SKU'] || ''));
-            
-            console.log('Processed results with SKUs:', results.map(r => r['Variant SKU']));
-            
-            return results;
-        }
-
-        function processInventoryData(data) {
-            const results = [];
-            
-            data.forEach(row => {
-                const result = {
-                    'Purchase Order Name': row['Purchase Order Name'] || '',
-                    'SKU': row['SKU'] || '',
-                    'Title': row['Title'] || '',
-                    'QOH': row['Quantity On Hand'] || '',
-                    'StatusV2': row['Statusv2'] || ''
-                };
-                
-                results.push(result);
-            });
-            
-            // Sort by SKU alphabetically
-            results.sort((a, b) => (a['SKU'] || '').localeCompare(b['SKU'] || ''));
-            
-            return results;
-        }
-
-        function displayResults(data) {
-            if (data.length === 0) {
-                document.getElementById('resultsTable').innerHTML = '<p>No data to display.</p>';
-                return;
-            }
-
-            const headers = Object.keys(data[0]);
-            let html = '<table><thead><tr>';
-            
-            headers.forEach(header => {
-                html += `<th>${header}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-            
-            data.forEach(row => {
-                html += '<tr>';
-                headers.forEach(header => {
-                    html += `<td>${row[header] || ''}</td>`;
-                });
-                html += '</tr>';
-            });
-            
-            html += '</tbody></table>';
-            document.getElementById('resultsTable').innerHTML = html;
-        }
-
-        function showLoading(show) {
-            document.getElementById('loadingIndicator').classList.toggle('hidden', !show);
-        }
-
-        function showError(message) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error';
-            errorDiv.textContent = message;
-            document.querySelector('.content').insertBefore(errorDiv, document.getElementById('output'));
-            setTimeout(() => errorDiv.remove(), 5000);
-        }
-
-        function showSuccess(message) {
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success';
-            successDiv.textContent = message;
-            document.querySelector('.content').insertBefore(successDiv, document.getElementById('output'));
-            setTimeout(() => successDiv.remove(), 5000);
-        }
-
-        function processData() {
-            const csvText = document.getElementById('csvData').value.trim();
-            const poNumbers = document.getElementById('poNumbers').value.trim();
-            
-            if (!csvText) {
-                showError('Please provide CSV data either by uploading a file or pasting data.');
-                return;
-            }
-
-            try {
-                showLoading(true);
-                document.getElementById('output').classList.remove('hidden');
-                
-                setTimeout(() => {
-                    try {
-                        const rawData = parseCSV(csvText);
-                        console.log('Raw data loaded:', rawData.length, 'records');
-                        
-                        // Always filter by PO if PO numbers are provided
-                        let filteredData;
-                        if (poNumbers && poNumbers.trim() !== '') {
-                            filteredData = filterDataByPO(rawData, poNumbers);
-                            console.log('After PO filtering:', filteredData.length, 'records');
-                            
-                            if (filteredData.length === 0) {
-                                showError(`No data found matching the PO numbers: "${poNumbers}". Check the browser console (F12) for detailed debugging information.`);
-                                showLoading(false);
-                                return;
-                            }
-                        } else {
-                            // If no PO numbers provided, ask user to confirm
-                            if (!confirm('No PO numbers entered. This will process ALL data in the file. Do you want to continue?')) {
-                                showLoading(false);
-                                return;
-                            }
-                            filteredData = rawData;
-                        }
-                        
-                        if (currentTool === 'matrixify') {
-                            processedData = processMatrixifyData(filteredData);
-                        } else {
-                            processedData = processInventoryData(filteredData);
-                        }
-                        
-                        displayResults(processedData);
-                        
-                        const poMessage = poNumbers ? ` (filtered by PO: ${poNumbers})` : ' (all data - no PO filter)';
-                        showSuccess(`Successfully processed ${processedData.length} records${poMessage}.`);
-                        showLoading(false);
-                    } catch (error) {
-                        showError('Error processing data: ' + error.message);
-                        showLoading(false);
-                    }
-                }, 100);
-                
-            } catch (error) {
-                showError('Error parsing CSV data: ' + error.message);
-                showLoading(false);
-            }
-        }
-
-        function generateAgain() {
-            processData();
-        }
-
-        function downloadCSV() {
-            if (processedData.length === 0) {
-                showError('No data to download. Please process data first.');
-                return;
-            }
-
-            const headers = Object.keys(processedData[0]);
-            let csv = headers.join(',') + '\n';
-            
-            processedData.forEach(row => {
-                const values = headers.map(header => {
-                    const value = row[header] || '';
-                    return `"${value}"`;
-                });
-                csv += values.join(',') + '\n';
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${currentTool}_export_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-
-        function downloadXLSX() {
-            if (processedData.length === 0) {
-                showError('No data to download. Please process data first.');
-                return;
-            }
-
-            // Simple XLSX generation using CSV format with .xlsx extension
-            // For a more robust solution, you would need a library like SheetJS
-            downloadCSV();
-            showSuccess('Data downloaded in CSV format (compatible with Excel).');
-        }
-    </script>
+    function downloadExcel() {
+      const { headers, rows } = window.generatedData;
+      const toolMode = document.getElementById('toolMode').value;
+      const filename = toolMode === 'A' ? 'ss_import_matrixify_output.xlsx' : 'received_inventories_output.xlsx';
+      const sheetName = toolMode === 'A' ? 'SS Import Data' : 'Received Inventories';
+      
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      
+      // Generate Excel file and download
+      XLSX.writeFile(workbook, filename);
+    }
+  </script>
 </body>
 </html>
