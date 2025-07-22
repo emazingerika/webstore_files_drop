@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Merge Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { font-size: 1.5em; }
+        .file-inputs, .controls { margin-bottom: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        table, th, td { border: 1px solid #ccc; }
+        th, td { padding: 8px; text-align: left; }
+        select, button { margin-right: 10px; padding: 6px 12px; }
+        #preview { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>Excel Merge Tool (Main File + Shopify ID Mapping)</h1>
+    <div class="file-inputs">
+        <label>Main Excel File: <input type="file" id="mainFile" accept=".xlsx, .xls"></label><br><br>
+        <label>Shopify ID Mapping File: <input type="file" id="mappingFile" accept=".xlsx, .xls"></label>
+    </div>
+
+    <div class="controls">
+        <label>Main Key Column: <select id="mainKey"></select></label>
+        <label>Mapping Key Column: <select id="mappingKey"></select></label>
+        <button id="previewBtn">Preview Merge</button>
+        <button id="downloadBtn" disabled>Download Merged Excel</button>
+    </div>
+
+    <div id="preview"></div>
+
+    <script>
+        let mainData = [], mappingData = [];
+        let mainHeaders = [], mappingHeaders = [];
+
+        function readExcel(file, callback) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                callback(json, Object.keys(json[0] || {}));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        document.getElementById('mainFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) readExcel(file, (data, headers) => {
+                mainData = data; mainHeaders = headers;
+                populateSelect('mainKey', headers);
+            });
+        });
+
+        document.getElementById('mappingFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) readExcel(file, (data, headers) => {
+                mappingData = data; mappingHeaders = headers;
+                populateSelect('mappingKey', headers);
+            });
+        });
+
+        function populateSelect(selectId, headers) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = "";
+            headers.forEach(h => {
+                const option = document.createElement('option');
+                option.value = h;
+                option.textContent = h;
+                select.appendChild(option);
+            });
+        }
+
+        document.getElementById('previewBtn').addEventListener('click', () => {
+            if (!mainData.length || !mappingData.length) {
+                alert("Please upload both files first.");
+                return;
+            }
+
+            const mainKey = document.getElementById('mainKey').value;
+            const mappingKey = document.getElementById('mappingKey').value;
+
+            const mappingMap = {};
+            mappingData.forEach(row => {
+                mappingMap[row[mappingKey]] = row;
+            });
+
+            const merged = mainData.map(row => {
+                const idRow = mappingMap[row[mainKey]];
+                if (idRow) {
+                    return { ...row, ...idRow };
+                }
+                return row;
+            });
+
+            previewTable(merged, mainHeaders);
+            document.getElementById('downloadBtn').disabled = false;
+            window.mergedData = merged;
+        });
+
+        function previewTable(data, headers) {
+            let html = "<table><thead><tr>";
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += "</tr></thead><tbody>";
+            data.slice(0, 20).forEach(row => {
+                html += "<tr>";
+                headers.forEach(h => html += `<td>${row[h] || ""}</td>`);
+                html += "</tr>";
+            });
+            html += "</tbody></table>";
+            document.getElementById('preview').innerHTML = html;
+        }
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const ws = XLSX.utils.json_to_sheet(window.mergedData, { header: mainHeaders });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Merged Data");
+            XLSX.writeFile(wb, "merged_output.xlsx");
+        });
+    </script>
+</body>
+</html>
