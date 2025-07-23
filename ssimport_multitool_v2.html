@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SS Import Multitool</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      line-height: 1.6;
+      color: #2c3e50;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 30px;
+    }
+    
+    h1 { 
+      color: #2c3e50;
+      margin-bottom: 10px;
+      font-size: 2.2rem;
+      font-weight: 700;
+      text-align: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #34495e;
+      font-size: 0.95rem;
+    }
+    
+    textarea, input[type="file"], button, select { 
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e1e8ed;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+    
+    textarea:focus, input[type="file"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 13px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .generate-btn {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      padding: 16px;
+      font-size: 16px;
+      margin: 20px 0;
+    }
+    
+    table { 
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    th, td { 
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #f1f3f4;
+    }
+    
+    th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    td {
+      font-size: 14px;
+    }
+    
+    tr:hover {
+      background-color: #f8f9ff;
+    }
+    
+    .instructions { 
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      border-left: 4px solid #2196f3;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+    }
+    
+    .instructions p {
+      margin: 0 0 12px 0;
+      font-weight: 600;
+      color: #1565c0;
+    }
+    
+    .instructions ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    
+    .instructions li {
+      margin-bottom: 8px;
+      color: #1976d2;
+    }
+    
+    .instructions a {
+      color: #1565c0;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .instructions a:hover {
+      text-decoration: underline;
+    }
+    
+    .error { 
+      color: #e74c3c;
+      font-weight: 600;
+      background: #ffeaea;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #e74c3c;
+    }
+    
+    .download-buttons { 
+      display: flex;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    
+    .download-buttons button { 
+      flex: 1;
+      padding: 14px;
+    }
+    
+    .links-section {
+      background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+      border-left: 4px solid #ff9800;
+      padding: 20px;
+      margin: 30px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(255, 152, 0, 0.1);
+    }
+    
+    .links-section p {
+      margin: 0 0 12px 0;
+      font-weight: 600;
+      color: #ef6c00;
+    }
+    
+    .links-section ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    
+    .links-section li {
+      margin-bottom: 8px;
+    }
+    
+    .links-section a {
+      color: #e65100;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .links-section a:hover {
+      text-decoration: underline;
+    }
+    
+    input[type="file"] {
+      background: #f8f9fa;
+      cursor: pointer;
+    }
+    
+    input[type="file"]:hover {
+      background: #e9ecef;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SS Import Multitool</h1>
+    
+    <div class="instructions">
+      <p>Instructions:</p>
+      <ul>
+        <li>You can paste tabular data or upload an Excel (.xlsx) file.</li>
+        <li>Drop data via <code>Ctrl + Shift + V</code> or select a file below.</li>
+        <li>Refer to report: <a href="https://emazing.my.salesforce.com/00O3r000006mGeP" target="_blank">Salesforce Report</a></li>
+      </ul>
+    </div>
+
+    <div class="form-group">
+      <label for="poNumber">Enter PO Number(s) (separated by commas, tabs, or line breaks):</label>
+      <textarea id="poNumber" placeholder="e.g. PO1234, PO5678">PO1001</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="excelInput">Or upload an Excel (.xlsx) file:</label>
+      <input type="file" id="excelInput" accept=".xlsx" />
+    </div>
+
+    <div class="form-group">
+      <label for="rawData">Or paste your SS Import Drop Data here (tab-separated):</label>
+      <textarea id="rawData" rows="10">Purchase Order: Purchase Order Name	B2C Product: SKU	Style	Shopify Product Type	Statusv2	Title	Quantity On Hand	Primary Location	Unit Weight	Unit Dimension	UPC	ASIN	Item ID
+PO1001	SKU123	CoolStyle	Apparel	Active	Cool T-Shirt	10	Main Warehouse	1.2	10x5x2	123456789012	B00TESTASIN	ITM123</textarea>
+    </div>
+
+    <button class="generate-btn" onclick="processData()">Generate Output</button>
+
+    <div class="links-section">
+      <p>Bulk Update to this link:</p>
+      <ul>
+        <li><a href="https://admin.shopify.com/store/iheartraves/apps/excel-export-import" target="_blank">iHR: MATRIXIFY IMPORT</a></li>
+        <li><a href="https://admin.shopify.com/store/into-the-am/apps/excel-export-import" target="_blank">ITAM: MATRIXIFY IMPORT</a></li>
+      </ul>
+    </div>
+
+    <div id="output"></div>
+    
+    <div class="download-buttons" id="downloadButtons" style="display:none;">
+      <button onclick="downloadCSV()">Download Matrixify CSV</button>
+      <button onclick="downloadSimpleCSV()">Download Simple Data CSV</button>
+    </div>
+  </div>
+
+  <script>
+    let parsedData = [];
+    let matchedSourceData = [];
+
+    document.getElementById('excelInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        parsedData = json;
+        document.getElementById('rawData').value = ''; // clear paste box if file uploaded
+        alert('Excel file loaded successfully. Now click "Generate Output".');
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function processData() {
+      const poInput = document.getElementById('poNumber').value;
+      const poNumbers = poInput.split(/[,	\n]+/).map(p => p.trim()).filter(p => p);
+      const rawText = document.getElementById('rawData').value;
+      let data = [];
+
+      if (parsedData.length) {
+        data = parsedData;
+      } else if (rawText.trim()) {
+        const rows = rawText.trim().split(/\n+/);
+        const headersRaw = rows[0].split(/\t+/).map(h => h.trim());
+        data = rows.slice(1).map(row => {
+          const cols = row.split(/\t+/);
+          let obj = {};
+          headersRaw.forEach((h, i) => obj[h] = cols[i] ? cols[i].trim() : '');
+          return obj;
+        });
+      }
+
+      const matchedData = data.filter(d => poNumbers.includes(d["Purchase Order: Purchase Order Name"]));
+      if (matchedData.length === 0) {
+        document.getElementById('output').innerHTML = '<p class="error">No matching PO Numbers found. Check your input.</p>';
+        document.getElementById('downloadButtons').style.display = 'none';
+        return;
+      }
+
+      // Store matched source data for the simple CSV
+      matchedSourceData = matchedData;
+
+      const output = matchedData.map(d => {
+        const [length, width, height] = (d["Unit Dimension"] || '').split('x').map(n => parseFloat(n) || '');
+        const weightGrams = Math.round(parseFloat(d["Unit Weight"] || 0) * 28.3495);
+        return {
+          "Variant SKU": d["B2C Product: SKU"],
+          "Variant Weight": weightGrams,
+          "Variant Command": "UPDATE",
+          "Variant Metafield: info.harmonized_system_code [single_line_text_field]": d["Shopify Product Type"],
+          "Variant Metafield: info.dimensional_groups [single_line_text_field]": "Default",
+          "Variant Metafield: info.origins [single_line_text_field]": "Main",
+          "Variant Metafield: info.shipping_groups [single_line_text_field]": "All Products not assigned to a Shipping Group",
+          "Variant Metafield: info.length [single_line_text_field]": length,
+          "Variant Metafield: info.width [single_line_text_field]": width,
+          "Variant Metafield: info.height [single_line_text_field]": height
+        };
+      }).sort((a, b) => a["Variant SKU"].localeCompare(b["Variant SKU"]));
+
+      const table = document.createElement('table');
+      const headerRow = document.createElement('tr');
+      Object.keys(output[0]).forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+
+      output.forEach(row => {
+        const tr = document.createElement('tr');
+        Object.values(row).forEach(val => {
+          const td = document.createElement('td');
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+
+      document.getElementById('output').innerHTML = '';
+      document.getElementById('output').appendChild(table);
+      document.getElementById('downloadButtons').style.display = 'flex';
+      window.generatedData = { headers: Object.keys(output[0]), rows: output };
+    }
+
+    function downloadCSV() {
+      const { headers, rows } = window.generatedData;
+      let csv = headers.join(',') + "\n" +
+        rows.map(row => headers.map(h => `"${row[h]}"`).join(',')).join("\n");
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'ss_import_matrixify_output.csv';
+      link.click();
+    }
+
+    function downloadSimpleCSV() {
+      if (!matchedSourceData.length) {
+        alert('No data available. Please generate output first.');
+        return;
+      }
+
+      const simpleData = matchedSourceData.map(d => ({
+        "Variant SKU": d["B2C Product: SKU"],
+        "Statusv2": d["Statusv2"],
+        "Title": d["Title"],
+        "QOH": d["Quantity On Hand"],
+        "Primary Location": d["Primary Location"],
+        "Unit Weight": d["Unit Weight"]
+      })).sort((a, b) => a["Variant SKU"].localeCompare(b["Variant SKU"]));
+
+      const headers = Object.keys(simpleData[0]);
+      let csv = headers.join(',') + "\n" +
+        simpleData.map(row => headers.map(h => `"${row[h]}"`).join(',')).join("\n");
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'ss_import_simple_data.csv';
+      link.click();
+    }
+  </script>
+</body>
+</html>
