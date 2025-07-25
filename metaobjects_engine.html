@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metaobjects Engine</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: linear-gradient(145deg, #2c2c54, #1a1a2e);
+            border: 1px solid #3d5afe;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #3d5afe, #2196f3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border: 2px solid #3d5afe;
+            border-radius: 12px;
+            background: linear-gradient(145deg, #1a1a2e, #2c2c54);
+            transition: all 0.3s ease;
+        }
+        
+        .section:hover {
+            border-color: #2196f3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.25);
+        }
+        
+        .section h3 {
+            margin-top: 0;
+            color: #ffffff;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #3d5afe;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #333333;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="file"]:hover {
+            border-color: #2196f3;
+            background: #f8f9ff;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            border: 2px solid #3d5afe;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.3s ease;
+            background: #ffffff;
+            color: #333333;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #2196f3;
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+        }
+        
+        textarea::placeholder {
+            color: #666666;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #3d5afe, #2196f3);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(61, 90, 254, 0.4);
+            margin: 10px 5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(61, 90, 254, 0.6);
+            background: linear-gradient(45deg, #2196f3, #1976d2);
+        }
+        
+        button:disabled {
+            background: #616161;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: linear-gradient(145deg, #1b5e20, #2e7d32);
+            color: #c8e6c9;
+            border: 1px solid #4caf50;
+        }
+        
+        .status.error {
+            background: linear-gradient(145deg, #b71c1c, #d32f2f);
+            color: #ffcdd2;
+            border: 1px solid #f44336;
+        }
+        
+        .status.info {
+            background: linear-gradient(145deg, #0d47a1, #1976d2);
+            color: #bbdefb;
+            border: 1px solid #2196f3;
+        }
+        
+        .preview-table {
+            max-height: 400px;
+            overflow: auto;
+            border: 1px solid #3d5afe;
+            border-radius: 8px;
+            margin-top: 15px;
+            background: #1a1a2e;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            color: #ffffff;
+        }
+        
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #3d5afe;
+            white-space: nowrap;
+        }
+        
+        th {
+            background: linear-gradient(45deg, #3d5afe, #2196f3);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:hover {
+            background: #2c2c54;
+        }
+        
+        .download-section {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(145deg, #1a1a2e, #2c2c54);
+            border: 2px solid #3d5afe;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+        
+        .download-section h3 {
+            color: #ffffff;
+        }
+        
+        #downloadBtn {
+            font-size: 18px;
+            padding: 20px 40px;
+            background: linear-gradient(45deg, #1976d2, #2196f3);
+        }
+        
+        #downloadBtn:hover {
+            background: linear-gradient(45deg, #1565c0, #1976d2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Metaobjects Engine</h1>
+        
+        <div class="section">
+            <h3>📋 Instructions</h3>
+            <div style="color: #ffffff; line-height: 1.6;">
+                <p><strong>Step 1:</strong> Download the Meta Engine File from: 
+                   <a href="https://emazing.my.salesforce.com/00OPH000007ecfF" target="_blank" style="color: #2196f3; text-decoration: none;">
+                       https://emazing.my.salesforce.com/00OPH000007ecfF
+                   </a>
+                </p>
+                <p><strong>Step 2:</strong> Upload the downloaded CSV file using the file upload field below</p>
+                <p><strong>Step 3:</strong> Enter your Parent SKUs (one per line) in the text area</p>
+                <p><strong>Step 4:</strong> Click "Process SKUs" to generate the metafield data</p>
+                <p><strong>Step 5:</strong> Review the preview and click "iHR Meta Engine" to download the Excel file</p>
+                <p style="margin-top: 15px; padding: 10px; background: rgba(33, 150, 243, 0.1); border-left: 4px solid #2196f3; border-radius: 4px;">
+                   <strong>Note:</strong> The tool will find matching styles for your Parent SKUs and combine colors across variants automatically.
+                </p>
+            </div>
+         div>
+        
+        <div class="section">
+            <h3>📁 Upload Your CSV File</h3>
+            <input type="file" id="fileInput" accept=".csv" />
+            <div id="fileStatus"></div>
+        </div>
+        
+        <div class="section">
+            <h3>🏷️ Enter Parent SKUs</h3>
+            <textarea id="parentSkus" placeholder="Enter parent SKUs, one per line:&#10;iHR18018&#10;iHR18188&#10;iHR18189"></textarea>
+        </div>
+        
+        <div class="section">
+            <h3>⚙️ Process Data</h3>
+            <button id="processBtn" onclick="processData()">Process SKUs</button>
+            <div id="processStatus"></div>
+        </div>
+        
+        <div id="previewSection" style="display: none;">
+            <div class="section">
+                <h3>👀 Preview Results</h3>
+                <div id="previewContainer"></div>
+            </div>
+        </div>
+        
+        <div class="download-section" id="downloadSection" style="display: none;">
+            <h3>💾 Download Results</h3>
+            <button id="downloadBtn" onclick="downloadExcel()">iHR Meta Engine</button>
+        </div>
+    </div>
+
+    <script>
+        let csvData = [];
+        let processedData = [];
+        
+        // File upload handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    dynamicTyping: true,
+                    complete: function(results) {
+                        csvData = results.data;
+                        showStatus('fileStatus', `File loaded successfully! Found ${csvData.length} rows.`, 'success');
+                        
+                        // Clean headers by trimming whitespace
+                        if (csvData.length > 0) {
+                            const cleanedData = csvData.map(row => {
+                                const cleanedRow = {};
+                                Object.keys(row).forEach(key => {
+                                    const cleanKey = key.trim();
+                                    cleanedRow[cleanKey] = row[key];
+                                });
+                                return cleanedRow;
+                            });
+                            csvData = cleanedData;
+                        }
+                    },
+                    error: function(error) {
+                        showStatus('fileStatus', `Error loading file: ${error.message}`, 'error');
+                    }
+                });
+            }
+        });
+        
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function processData() {
+            if (csvData.length === 0) {
+                showStatus('processStatus', 'Please upload a CSV file first.', 'error');
+                return;
+            }
+            
+            const parentSkusText = document.getElementById('parentSkus').value.trim();
+            if (!parentSkusText) {
+                showStatus('processStatus', 'Please enter parent SKUs.', 'error');
+                return;
+            }
+            
+            const parentSkus = parentSkusText.split('\n').map(sku => sku.trim()).filter(sku => sku);
+            
+            try {
+                // Find matching styles for each parent SKU
+                const matchingRows = [];
+                const parentSkuColors = {}; // Store colors for each parent SKU
+                
+                parentSkus.forEach(parentSku => {
+                    const matchingStyles = csvData.filter(row => {
+                        const style = row['Style'] || '';
+                        return style.toString().startsWith(parentSku + '-');
+                    });
+                    
+                    // Collect all colors for this parent SKU
+                    const colors = [...new Set(matchingStyles.map(row => row['Color']).filter(color => color))];
+                    parentSkuColors[parentSku] = colors.join(', ');
+                    
+                    matchingRows.push(...matchingStyles);
+                });
+                
+                if (matchingRows.length === 0) {
+                    showStatus('processStatus', 'No matching styles found for the provided parent SKUs.', 'error');
+                    return;
+                }
+                
+                // Process the data and rename columns
+                processedData = matchingRows.map(row => {
+                    // Get the parent SKU for this row
+                    const style = row['Style'] || '';
+                    let parentSku = '';
+                    parentSkus.forEach(pSku => {
+                        if (style.startsWith(pSku + '-')) {
+                            parentSku = pSku;
+                        }
+                    });
+                    
+                    // Process Exclusive field
+                    let exclusiveValue = '';
+                    const exclusive = row['Exclusive'];
+                    if (exclusive == 1) {
+                        exclusiveValue = 'exclusive.ihr-collab';
+                    } else if (exclusive == 0) {
+                        exclusiveValue = 'exclusive.non-collab';
+                    }
+                    
+                    return {
+                        'Variant SKU': row['B2C Product: SKU'] || '',
+                        'Variant Command': 'MERGE',
+                        'Metafield: shopify.fabric [list.metaobject_reference]': row['Product Filter 2 Fabric'] || '',
+                        'Metafield: custom.usp_icons [list.metaobject_reference]': '',
+                        'Metafield: custom.product_type [list.metaobject_reference]': row['Shopify Product Type'] || '',
+                        'Metafield: custom.exclusive [list.metaobject_reference]': exclusiveValue,
+                        'Metafield: shopify.color-pattern [list.metaobject_reference]': parentSkuColors[parentSku] || row['Color'] || ''
+                    };
+                });
+                
+                showStatus('processStatus', `Processing complete! Found ${processedData.length} matching records.`, 'success');
+                showPreview();
+                document.getElementById('downloadSection').style.display = 'block';
+                
+            } catch (error) {
+                showStatus('processStatus', `Error processing data: ${error.message}`, 'error');
+                console.error('Processing error:', error);
+            }
+        }
+        
+        function showPreview() {
+            if (processedData.length === 0) return;
+            
+            const previewSection = document.getElementById('previewSection');
+            const previewContainer = document.getElementById('previewContainer');
+            
+            // Show only first 10 rows for preview
+            const previewRows = processedData.slice(0, 10);
+            const columns = Object.keys(processedData[0]);
+            
+            let tableHTML = '<div class="preview-table"><table>';
+            
+            // Header
+            tableHTML += '<thead><tr>';
+            columns.forEach(col => {
+                tableHTML += `<th>${col}</th>`;
+            });
+            tableHTML += '</tr></thead>';
+            
+            // Rows
+            tableHTML += '<tbody>';
+            previewRows.forEach(row => {
+                tableHTML += '<tr>';
+                columns.forEach(col => {
+                    const value = row[col] || '';
+                    tableHTML += `<td>${value}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            tableHTML += '</tbody></table></div>';
+            
+            tableHTML += `<p><strong>Showing first 10 of ${processedData.length} records</strong></p>`;
+            
+            previewContainer.innerHTML = tableHTML;
+            previewSection.style.display = 'block';
+        }
+        
+        function downloadExcel() {
+            if (processedData.length === 0) {
+                alert('No data to download. Please process the SKUs first.');
+                return;
+            }
+            
+            try {
+                // Create a new workbook
+                const wb = XLSX.utils.book_new();
+                
+                // Convert data to worksheet
+                const ws = XLSX.utils.json_to_sheet(processedData);
+                
+                // Add worksheet to workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Processed SKUs');
+                
+                // Generate filename with timestamp
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                const filename = `iHR_Meta_Engine_${timestamp}.xlsx`;
+                
+                // Save file
+                XLSX.writeFile(wb, filename);
+                
+                showStatus('processStatus', `Excel file downloaded: ${filename}`, 'success');
+                
+            } catch (error) {
+                showStatus('processStatus', `Error creating Excel file: ${error.message}`, 'error');
+                console.error('Excel generation error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
