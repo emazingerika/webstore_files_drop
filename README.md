@@ -4,5 +4,8 @@ SS Import Multitool - To generate MY file, Received Inventories, and SS Import l
   Webstore QC Tool - To generate a fix list for errors found in Price, Special Price, UPCs, and Costs
     https://emazingerika.github.io/webstore_files_drop/ihr_itam_webstore_qc_tool.html
 
+  Metaobjectes Engine - To update iHR (for now) metabojects (USPs, Fabric, Product Type) and tags (BADGE, FIT NOTE)
+  https://emazingerika.github.io/webstore_files_drop/metaobjects_engine.html
+
 (OLD) SS Import - To generate matrixify file
   https://emazingerika.github.io/webstore_files_drop/ss_import_matrixify_excel_enabled.html
