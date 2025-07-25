@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metaobjects Engine - Blue & White</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9fafc;
+            color: #1a237e;
+        }
+        .container {
+            background: #ffffff;
+            border: 1px solid #90caf9;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        h1 {
+            text-align: center;
+            color: #0d47a1;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+        h3 {
+            margin-top: 0;
+            color: #1565c0;
+        }
+        input[type="file"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #90caf9;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+        button {
+            background: #2196f3;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success {background: #e3f2fd; color: #1e88e5;}
+        .status.error {background: #ffebee; color: #c62828;}
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #bbdefb;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #e3f2fd;
+            color: #0d47a1;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔧 Metaobjects Engine</h1>
+
+    <div class="section">
+        <h3>📁 Upload CSV File</h3>
+        <input type="file" id="fileInputCsv" accept=".csv" />
+        <div id="fileStatusCsv"></div>
+    </div>
+
+    <div class="section">
+        <h3>📁 Upload Excel Workbook</h3>
+        <input type="file" id="fileInputExcel" accept=".xlsx, .xls" />
+        <div id="fileStatusExcel"></div>
+    </div>
+
+    <div class="section">
+        <h3>🏷️ Enter Parent SKUs</h3>
+        <textarea id="parentSkus" placeholder="Enter parent SKUs, one per line"></textarea>
+    </div>
+
+    <div class="section">
+        <button onclick="processData()">Process SKUs</button>
+        <div id="processStatus"></div>
+    </div>
+
+    <div class="section" id="previewSection" style="display:none;">
+        <h3>👀 Preview</h3>
+        <div id="previewContainer"></div>
+    </div>
+
+    <div class="section" id="downloadSection" style="display:none; text-align:center;">
+        <button onclick="downloadExcel()">Download Results</button>
+    </div>
+</div>
+
+<script>
+let csvData = [];
+let excelData = [];
+let processedData = [];
+
+const uspMap = {
+    "Adjustable Band": "usp_icons.adjustable-band",
+    "Adjustable Cups": "usp_icons.adjustable-cups",
+    "Adjustable Garter": "usp_icons.adjustable-garter",
+    "Adjustable Straps": "usp_icons.adjustable-straps",
+    "Adjustable Ties": "usp_icons.adjustable-ties",
+    "Adjustable Waist": "usp_icons.adjustable-waist",
+    "Anti-Cameltoe": "usp_icons.anti-cameltoe",
+    "Breathable": "usp_icons.breathable",
+    "Built-In Bottom": "usp_icons.built-in-bottom",
+    "Cheeky": "usp_icons.cheeky",
+    "Contour Back": "usp_icons.contour-back",
+    "Double-Lined": "usp_icons.double-lined",
+    "Eco Friendly": "usp_icons.eco-friendly",
+    "Elastic Band": "usp_icons.elastic-band",
+    "Flash reflective": "usp_icons.flash-reflective",
+    "Form Fitting": "usp_icons.form-fitting",
+    "Full Coverage": "usp_icons.full-coverage",
+    "Hidden Pockets": "usp_icons.hidden-pockets",
+    "Placement Print": "usp_icons.placement-print",
+    "Pockets": "usp_icons.pockets",
+    "Removable Pads": "usp_icons.removable-pads",
+    "Shelf Bra": "usp_icons.shelf-bra",
+    "Snap Closure": "usp_icons.snap-closure",
+    "Stretchy": "usp_icons.stretchy",
+    "Swim Friendly": "usp_icons.swim-friendly",
+    "Ultra Cheeky": "usp_icons.ultra-cheeky",
+    "Ultra Soft": "usp_icons.ultra-soft",
+    "Unisex": "usp_icons.unisex",
+    "UV Reactive": "usp_icons.uv-reactive"
+};
+
+document.getElementById('fileInputCsv').addEventListener('change', e => {
+    const file = e.target.files[0];
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: results => {
+            csvData = results.data;
+            document.getElementById('fileStatusCsv').innerHTML = `<div class="status success">Loaded CSV with ${csvData.length} rows.</div>`;
+        }
+    });
+});
+
+document.getElementById('fileInputExcel').addEventListener('change', e => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = evt => {
+        const workbook = XLSX.read(evt.target.result, {type: 'binary'});
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        excelData = XLSX.utils.sheet_to_json(firstSheet, {defval: ''});
+        document.getElementById('fileStatusExcel').innerHTML = `<div class="status success">Loaded Excel with ${excelData.length} rows.</div>`;
+    };
+    reader.readAsBinaryString(file);
+});
+
+function processData() {
+    if (!csvData.length) {
+        document.getElementById('processStatus').innerHTML = '<div class="status error">Please upload CSV file first.</div>';
+        return;
+    }
+
+    const parentSkus = document.getElementById('parentSkus').value.split('\n').map(s => s.trim()).filter(Boolean);
+    processedData = [];
+
+    parentSkus.forEach(pSku => {
+        const csvMatches = csvData.filter(row => (row['Style'] || '').startsWith(pSku + '-'));
+        const excelMatch = excelData.find(row => (row['Parent SKU'] || '').trim() === pSku);
+
+        csvMatches.forEach(row => {
+            const uspRaw = excelMatch ? (excelMatch['USP'] || '') : '';
+            const uspProcessed = uspRaw.split(',').map(u => uspMap[u.trim()] || '').filter(Boolean).join(', ');
+            const tags = excelMatch ? [excelMatch['BADGE'], excelMatch['FIT NOTE']].filter(Boolean).join(', ') : '';
+
+            processedData.push({
+                'Variant SKU': row['B2C Product: SKU'] || '',
+                'Variant Command': 'MERGE',
+                'Metafield: shopify.fabric [list.metaobject_reference]': row['Product Filter 2 Fabric'] || '',
+                'Metafield: custom.product_type [list.metaobject_reference]': row['Shopify Product Type'] || '',
+                'Metafield: custom.exclusive [list.metaobject_reference]': (row['Exclusive'] == 1 ? 'exclusive.ihr-collab' : row['Exclusive'] == 0 ? 'exclusive.non-collab' : ''),
+                'Metafield: shopify.color-pattern [list.metaobject_reference]': row['Color'] || '',
+                'Metafield: custom.usp_icons [list.metaobject_reference]': uspProcessed,
+                'Tags': tags,
+                'Tags command': 'MERGE'
+            });
+        });
+    });
+
+    if (!processedData.length) {
+        document.getElementById('processStatus').innerHTML = '<div class="status error">No matching SKUs found.</div>';
+        return;
+    }
+
+    document.getElementById('processStatus').innerHTML = `<div class="status success">Processing complete! ${processedData.length} rows ready.</div>`;
+    showPreview();
+}
+
+function showPreview() {
+    const preview = processedData.slice(0, 10);
+    const columns = Object.keys(preview[0]);
+    let html = '<table><thead><tr>';
+    columns.forEach(c => html += `<th>${c}</th>`);
+    html += '</tr></thead><tbody>';
+    preview.forEach(row => {
+        html += '<tr>';
+        columns.forEach(c => html += `<td>${row[c]}</td>`);
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('previewContainer').innerHTML = html;
+    document.getElementById('previewSection').style.display = 'block';
+    document.getElementById('downloadSection').style.display = 'block';
+}
+
+function downloadExcel() {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(processedData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Processed SKUs');
+    XLSX.writeFile(wb, `Processed_Metaobjects_${Date.now()}.xlsx`);
+}
+</script>
+</body>
+</html>
