@@ -268,7 +268,7 @@ PO1001	SKU123	CoolStyle	Apparel	Active	Cool T-Shirt	10	Main Warehouse	1.2	10x5x2
     
     <div class="download-buttons" id="downloadButtons" style="display:none;">
       <button onclick="downloadCSV()">Download Matrixify CSV</button>
-      <button onclick="downloadSimpleCSV()">Download Simple Data CSV</button>
+      <button onclick="downloadReceivedInventoriesCSV()">Download Received Inventories File</button>
     </div>
   </div>
 
@@ -318,7 +318,7 @@ PO1001	SKU123	CoolStyle	Apparel	Active	Cool T-Shirt	10	Main Warehouse	1.2	10x5x2
         return;
       }
 
-      // Store matched source data for the simple CSV
+      // Store matched source data for the received inventories CSV
       matchedSourceData = matchedData;
 
       const output = matchedData.map(d => {
@@ -374,29 +374,31 @@ PO1001	SKU123	CoolStyle	Apparel	Active	Cool T-Shirt	10	Main Warehouse	1.2	10x5x2
       link.click();
     }
 
-    function downloadSimpleCSV() {
+    function downloadReceivedInventoriesCSV() {
       if (!matchedSourceData.length) {
         alert('No data available. Please generate output first.');
         return;
       }
 
-      const simpleData = matchedSourceData.map(d => ({
+      const receivedInventoriesData = matchedSourceData.map(d => ({
         "Variant SKU": d["B2C Product: SKU"],
         "Statusv2": d["Statusv2"],
         "Title": d["Title"],
         "QOH": d["Quantity On Hand"],
         "Primary Location": d["Primary Location"],
-        "Unit Weight": d["Unit Weight"]
+        "Unit Weight": d["Unit Weight"],
+        "UPC": d["UPC"],
+        "ASIN": d["ASIN"]
       })).sort((a, b) => a["Variant SKU"].localeCompare(b["Variant SKU"]));
 
-      const headers = Object.keys(simpleData[0]);
+      const headers = Object.keys(receivedInventoriesData[0]);
       let csv = headers.join(',') + "\n" +
-        simpleData.map(row => headers.map(h => `"${row[h]}"`).join(',')).join("\n");
+        receivedInventoriesData.map(row => headers.map(h => `"${row[h]}"`).join(',')).join("\n");
       
       const blob = new Blob([csv], { type: 'text/csv' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = 'ss_import_simple_data.csv';
+      link.download = 'received_inventories_file.csv';
       link.click();
     }
   </script>
