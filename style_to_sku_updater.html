@@ -401,7 +401,22 @@
                         if (matchingRows.length > 0) {
                             matchedStyles += matchingRows.length;
                             totalChildSkus += matchingRows.length;
-                            processedData.push(...matchingRows);
+                            
+                            // Add Parent SKU to each row
+                            const enrichedRows = matchingRows.map(row => {
+                                const style = row['Style'] || '';
+                                // Extract parent SKU by removing everything after the last hyphen
+                                const parentSku = style.includes('-') ? 
+                                    style.substring(0, style.lastIndexOf('-')) : 
+                                    style;
+                                
+                                return {
+                                    ...row,
+                                    'Parent SKU': parentSku
+                                };
+                            });
+                            
+                            processedData.push(...enrichedRows);
                         }
                     });
 
@@ -440,7 +455,8 @@
                     'Discontinued': row['Discontinued'] || '',
                     'Product Cost': row['Product Cost'] || '',
                     'Freight Cost (per unit)': row['Freight Cost (per unit)'] || '',
-                    'Markdown Date': currentDate
+                    'Markdown Date': currentDate,
+                    'Parent SKU': row['Parent SKU'] || ''
                 }));
 
                 downloadCSV(csvOutput, `salesforce_import_${currentDate}.csv`);
@@ -451,7 +467,8 @@
                     'Variant SKU': row['B2C Product: SKU'] || '',
                     'Variant Price': row['True Special Price'] || '',
                     'Variant Compare at Price': row['True Price'] || '',
-                    'Variant Command': 'MERGE'
+                    'Variant Command': 'MERGE',
+                    'Parent SKU': row['Parent SKU'] || ''
                 }));
 
                 downloadExcel(excelOutput, `matrixify_import_${currentDate}.xlsx`);
