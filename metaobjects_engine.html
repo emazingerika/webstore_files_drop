@@ -193,10 +193,13 @@ function processData() {
         
         const csvMatches = csvData.filter(row => (row['Style'] || '').startsWith(pSku + '-'));
         
-        // Look for exact match first, then try base SKU if no exact match found
-        let excelMatch = excelData.find(row => (row['Parent SKU'] || '').trim() === pSku);
-        if (!excelMatch && pSku !== baseParentSku) {
-            excelMatch = excelData.find(row => (row['Parent SKU'] || '').trim() === baseParentSku);
+        // Look for exact match first, then try base SKU if no exact match found (only if Excel data exists)
+        let excelMatch = null;
+        if (excelData.length > 0) {
+            excelMatch = excelData.find(row => (row['Parent SKU'] || '').trim() === pSku);
+            if (!excelMatch && pSku !== baseParentSku) {
+                excelMatch = excelData.find(row => (row['Parent SKU'] || '').trim() === baseParentSku);
+            }
         }
 
         csvMatches.forEach(row => {
