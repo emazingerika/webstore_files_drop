@@ -188,8 +188,16 @@ function processData() {
     processedData = [];
 
     parentSkus.forEach(pSku => {
+        // Handle both exact matches and suffixed versions (e.g., iHR10455, iHR10455-1, iHR10455-2)
+        const baseParentSku = pSku.split('-')[0]; // Get base SKU (e.g., iHR10455 from iHR10455-1)
+        
         const csvMatches = csvData.filter(row => (row['Style'] || '').startsWith(pSku + '-'));
-        const excelMatch = excelData.find(row => (row['Parent SKU'] || '').trim() === pSku);
+        
+        // Look for exact match first, then try base SKU if no exact match found
+        let excelMatch = excelData.find(row => (row['Parent SKU'] || '').trim() === pSku);
+        if (!excelMatch && pSku !== baseParentSku) {
+            excelMatch = excelData.find(row => (row['Parent SKU'] || '').trim() === baseParentSku);
+        }
 
         csvMatches.forEach(row => {
             const uspRaw = excelMatch ? (excelMatch['USP'] || '') : '';
