@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Style to SKU Updater</title>
+    <title>Style to SKU Compiler</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -177,9 +177,15 @@
             box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
         }
 
-        .btn-excel:hover:not(:disabled) {
+        .btn-preview {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-preview:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
         }
 
         .status {
@@ -282,11 +288,25 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Style to SKU Updater</h1>
+            <h1>Style to SKU Compiler</h1>
             <p>Upload your data file and enter parent SKUs to generate child SKU reports</p>
         </div>
 
         <div class="content">
+            <div class="instructions">
+                <h3>⚠️ Important Instructions</h3>
+                <p><strong>Important: This is only a COMPILER. This is not meant to be a process > import immediately tool. You still have to apply the changes and do proper QC.</strong></p>
+                <ol>
+                    <li>Download the Salesforce Report here: <a href="https://emazing.my.salesforce.com/00O3r000007D6Un" target="_blank">https://emazing.my.salesforce.com/00O3r000007D6Un</a></li>
+                    <li>Upload the Salesforce Report in (1)</li>
+                    <li>Paste the Parent SKUs (iHR12345 / iHR12345-1 / VT1-12345) in (2)</li>
+                    <li>Process Data</li>
+                    <li>Preview your results</li>
+                    <li>Download the Salesforce Import File and start working on the changes manually</li>
+                    <li>Download the Matrixify Import File and start working on the changes manually</li>
+                </ol>
+            </div>
+
             <div class="section">
                 <h2><span class="section-icon">1</span>Upload Data File</h2>
                 <div class="input-group">
@@ -310,6 +330,10 @@
                         <span id="processIcon">🔄</span>
                         Process Data
                     </button>
+                    <button id="previewBtn" class="btn-preview" disabled>
+                        <span>👁️</span>
+                        Preview Results
+                    </button>
                     <button id="csvBtn" class="btn-csv" disabled>
                         <span>📊</span>
                         Salesforce Import
@@ -323,26 +347,63 @@
 
             <div id="status" class="status"></div>
             <div id="stats" class="stats" style="display: none;"></div>
+            
+            <div id="previewContainer" class="preview-container">
+                <div class="preview-header">
+                    <div class="preview-title">Data Preview</div>
+                    <div class="preview-tabs">
+                        <button class="tab-btn active" data-tab="salesforce">Salesforce Import</button>
+                        <button class="tab-btn" data-tab="matrixify">Matrixify Import</button>
+                    </div>
+                </div>
+                <div class="preview-content">
+                    <table id="previewTable" class="preview-table">
+                        <thead id="previewHeader"></thead>
+                        <tbody id="previewBody"></tbody>
+                    </table>
+                </div>
+                <div class="preview-info">
+                    <span id="previewInfo">Showing first 50 rows of processed data</span>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         let csvData = [];
         let processedData = [];
+        let salesforceData = [];
+        let matrixifyData = [];
 
         const fileInput = document.getElementById('fileInput');
         const parentSkusInput = document.getElementById('parentSkus');
         const processBtn = document.getElementById('processBtn');
+        const previewBtn = document.getElementById('previewBtn');
         const csvBtn = document.getElementById('csvBtn');
         const excelBtn = document.getElementById('excelBtn');
         const status = document.getElementById('status');
         const stats = document.getElementById('stats');
         const processIcon = document.getElementById('processIcon');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewTable = document.getElementById('previewTable');
+        const previewHeader = document.getElementById('previewHeader');
+        const previewBody = document.getElementById('previewBody');
+        const previewInfo = document.getElementById('previewInfo');
 
         fileInput.addEventListener('change', handleFileUpload);
         processBtn.addEventListener('click', processData);
+        previewBtn.addEventListener('click', showPreview);
         csvBtn.addEventListener('click', () => exportData('csv'));
         excelBtn.addEventListener('click', () => exportData('excel'));
+
+        // Tab switching
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab-btn')) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                updatePreviewTable(e.target.dataset.tab);
+            }
+        });
 
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -387,15 +448,35 @@
                     processedData = [];
                     let matchedStyles = 0;
                     let totalChildSkus = 0;
+                    let debugInfo = [];
+
+                    // First, let's see what Style values we have
+                    const uniqueStyles = [...new Set(csvData.map(row => row['Style'] || ''))].slice(0, 10);
+                    console.log('Sample Style values:', uniqueStyles);
 
                     // Find matching styles and their child SKUs
                     parentSkus.forEach(parentSku => {
                         const trimmedParent = parentSku.trim();
                         
-                        // Find all styles that match this parent SKU pattern
-                        const matchingRows = csvData.filter(row => {
+                        // Try multiple matching strategies
+                        let matchingRows = csvData.filter(row => {
                             const style = row['Style'] || '';
-                            return style.startsWith(trimmedParent);
+                            // Strategy 1: Direct start match
+                            if (style.startsWith(trimmedParent)) return true;
+                            // Strategy 2: Match with hyphen
+                            if (style.startsWith(trimmedParent + '-')) return true;
+                            // Strategy 3: Extract parent from style and compare
+                            const extractedParent = style.includes('-') ? 
+                                style.substring(0, style.lastIndexOf('-')) : 
+                                style;
+                            if (extractedParent === trimmedParent) return true;
+                            return false;
+                        });
+
+                        debugInfo.push({
+                            parentSku: trimmedParent,
+                            matchCount: matchingRows.length,
+                            sampleMatches: matchingRows.slice(0, 3).map(r => r['Style'])
                         });
 
                         if (matchingRows.length > 0) {
@@ -412,7 +493,7 @@
                                 
                                 return {
                                     ...row,
-                                    'Parent SKU': parentSku
+                                    'Style': style
                                 };
                             });
                             
@@ -420,10 +501,17 @@
                         }
                     });
 
+                    console.log('Debug info:', debugInfo);
+
                     if (processedData.length === 0) {
-                        showStatus('No matching SKUs found. Please check your parent SKUs and file data.', 'error');
+                        const sampleStyles = csvData.slice(0, 5).map(row => row['Style']).join(', ');
+                        showStatus(`No matching SKUs found. Sample Style values from your file: ${sampleStyles}. Please check the format.`, 'error');
                     } else {
+                        // Prepare export data
+                        prepareExportData();
+                        
                         showStatus(`Processing complete! Found ${totalChildSkus} child SKUs from ${matchedStyles} matching styles.`, 'success');
+                        previewBtn.disabled = false;
                         csvBtn.disabled = false;
                         excelBtn.disabled = false;
                         showStats(parentSkus.length, matchedStyles, totalChildSkus);
@@ -437,6 +525,62 @@
             }, 500);
         }
 
+        function prepareExportData() {
+            const currentDate = new Date().toISOString().split('T')[0];
+            
+            // Prepare Salesforce data
+            salesforceData = processedData.map(row => ({
+                'External Product ID': row['B2C Product: SKU'] || '',
+                'True Special Price': row['True Special Price'] || '',
+                'True Price': row['True Price'] || '',
+                'Markdown': row['Markdown'] || '',
+                'Discontinued': row['Discontinued'] || '',
+                'Product Cost': row['Product Cost'] || '',
+                'Freight Cost (per unit)': row['Freight Cost (per unit)'] || '',
+                'Markdown Date': currentDate,
+                'Style': row['Style'] || ''
+            }));
+
+            // Prepare Matrixify data
+            matrixifyData = processedData.map(row => {
+                const variantPrice = row['True Special Price'] || '';
+                const comparePrice = row['True Price'] || '';
+                
+                return {
+                    'Variant SKU': row['B2C Product: SKU'] || '',
+                    'Variant Price': variantPrice,
+                    'Variant Compare at Price': variantPrice === comparePrice ? '' : comparePrice,
+                    'Variant Command': 'MERGE',
+                    'Style': row['Style'] || ''
+                };
+            });
+        }
+
+        function showPreview() {
+            previewContainer.style.display = 'block';
+            updatePreviewTable('salesforce');
+            previewContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function updatePreviewTable(format) {
+            const data = format === 'salesforce' ? salesforceData : matrixifyData;
+            const displayData = data.slice(0, 50); // Show first 50 rows
+            
+            if (displayData.length === 0) return;
+
+            // Create header
+            const headers = Object.keys(displayData[0]);
+            previewHeader.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+            
+            // Create body
+            previewBody.innerHTML = displayData.map(row => 
+                `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`
+            ).join('');
+            
+            // Update info
+            previewInfo.textContent = `Showing first ${displayData.length} of ${data.length} rows for ${format === 'salesforce' ? 'Salesforce Import' : 'Matrixify Import'}`;
+        }
+
         function exportData(format) {
             if (!processedData.length) {
                 showStatus('No data to export. Please process data first.', 'error');
@@ -446,32 +590,10 @@
             const currentDate = new Date().toISOString().split('T')[0];
 
             if (format === 'csv') {
-                // CSV format for Salesforce Import
-                const csvOutput = processedData.map(row => ({
-                    'External Product ID': row['B2C Product: SKU'] || '',
-                    'True Special Price': row['True Special Price'] || '',
-                    'True Price': row['True Price'] || '',
-                    'Markdown': row['Markdown'] || '',
-                    'Discontinued': row['Discontinued'] || '',
-                    'Product Cost': row['Product Cost'] || '',
-                    'Freight Cost (per unit)': row['Freight Cost (per unit)'] || '',
-                    'Markdown Date': currentDate,
-                    'Parent SKU': row['Parent SKU'] || ''
-                }));
-
-                downloadCSV(csvOutput, `salesforce_import_${currentDate}.csv`);
+                downloadCSV(salesforceData, `salesforce_import_${currentDate}.csv`);
                 showStatus('Salesforce Import CSV downloaded successfully!', 'success');
             } else {
-                // Excel format for Matrixify Import
-                const excelOutput = processedData.map(row => ({
-                    'Variant SKU': row['B2C Product: SKU'] || '',
-                    'Variant Price': row['True Special Price'] || '',
-                    'Variant Compare at Price': row['True Price'] || '',
-                    'Variant Command': 'MERGE',
-                    'Parent SKU': row['Parent SKU'] || ''
-                }));
-
-                downloadExcel(excelOutput, `matrixify_import_${currentDate}.xlsx`);
+                downloadExcel(matrixifyData, `matrixify_import_${currentDate}.xlsx`);
                 showStatus('Matrixify Import Excel file downloaded successfully!', 'success');
             }
         }
