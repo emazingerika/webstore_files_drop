@@ -139,11 +139,23 @@
             border: 2px dashed #dee2e6;
             text-align: center;
             transition: all 0.3s ease;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         
         .file-section:hover {
             border-color: #007bff;
             background: #e7f3ff;
+        }
+        
+        .file-section.dragover {
+            border-color: #28a745;
+            background: #d4edda;
+            transform: scale(1.02);
         }
         
         .file-section h3 {
@@ -172,12 +184,19 @@
             box-shadow: 0 10px 20px rgba(0, 123, 255, 0.3);
         }
         
+        .drag-text {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
         .file-info {
             margin-top: 15px;
             padding: 10px;
             background: white;
             border-radius: 5px;
             border: 1px solid #dee2e6;
+            width: 100%;
         }
         
         .file-info.success {
@@ -358,7 +377,6 @@
             <div class="download-section">
                 <button class="download-btn" id="downloadCsv" disabled>Download CSV Report</button>
                 <button class="download-btn" id="downloadXlsx" disabled>Download XLSX Report</button>
-                <button class="download-btn" id="generateAgain" disabled style="background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);">Generate Again</button>
             </div>
             
             <div class="instructions">
@@ -370,19 +388,21 @@
             </div>
             
             <div class="file-sections">
-                <div class="file-section">
+                <div class="file-section" id="fileASection">
                     <h3>File A: Salesforce Export</h3>
                     <label for="fileA" class="file-label">Choose Salesforce CSV File</label>
                     <input type="file" id="fileA" class="file-input" accept=".csv">
+                    <div class="drag-text">or drag and drop your CSV file here</div>
                     <div id="fileAInfo" class="file-info" style="display: none;">
                         <span id="fileAName"></span>
                     </div>
                 </div>
                 
-                <div class="file-section">
+                <div class="file-section" id="fileBSection">
                     <h3>File B: Matrixify Export</h3>
                     <label for="fileB" class="file-label">Choose Matrixify CSV File</label>
                     <input type="file" id="fileB" class="file-input" accept=".csv">
+                    <div class="drag-text">or drag and drop your CSV file here</div>
                     <div id="fileBInfo" class="file-info" style="display: none;">
                         <span id="fileBName"></span>
                     </div>
@@ -410,40 +430,112 @@
         let fileBData = null;
         let processedResults = [];
         
-        // File upload handlers
+        // Helper function to normalize numeric values for comparison
+        function normalizeNumericValue(value) {
+            if (!value || value === '') return '';
+            const num = parseFloat(value);
+            return isNaN(num) ? value : num.toString();
+        }
+        
+        // Helper function to handle file processing
+        function processFile(file, callback) {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: callback
+            });
+        }
+        
+        // Drag and drop functionality
+        function setupDragDrop(sectionId, fileInputId, fileData, dataProperty) {
+            const section = document.getElementById(sectionId);
+            const fileInput = document.getElementById(fileInputId);
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                section.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                section.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                section.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight(e) {
+                section.classList.add('dragover');
+            }
+            
+            function unhighlight(e) {
+                section.classList.remove('dragover');
+            }
+            
+            section.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+                        fileInput.files = files;
+                        handleFileUpload(file, sectionId.replace('Section', ''));
+                    } else {
+                        alert('Please drop a CSV file.');
+                    }
+                }
+            }
+            
+            // Also handle click on the section to trigger file input
+            section.addEventListener('click', function(e) {
+                if (e.target === section || e.target.classList.contains('drag-text')) {
+                    fileInput.click();
+                }
+            });
+        }
+        
+        // Handle file upload (both drag/drop and click)
+        function handleFileUpload(file, fileType) {
+            const nameElement = document.getElementById(`file${fileType.toUpperCase()}Name`);
+            const infoElement = document.getElementById(`file${fileType.toUpperCase()}Info`);
+            
+            nameElement.textContent = file.name;
+            infoElement.style.display = 'block';
+            infoElement.classList.add('success');
+            
+            processFile(file, function(results) {
+                if (fileType === 'A') {
+                    fileAData = results.data;
+                } else {
+                    fileBData = results.data;
+                }
+                checkFilesReady();
+            });
+        }
+        
+        // Setup drag and drop for both sections
+        setupDragDrop('fileASection', 'fileA', fileAData, 'fileAData');
+        setupDragDrop('fileBSection', 'fileB', fileBData, 'fileBData');
+        
+        // File upload handlers (for click selection)
         document.getElementById('fileA').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                document.getElementById('fileAName').textContent = file.name;
-                document.getElementById('fileAInfo').style.display = 'block';
-                document.getElementById('fileAInfo').classList.add('success');
-                
-                Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        fileAData = results.data;
-                        checkFilesReady();
-                    }
-                });
+                handleFileUpload(file, 'A');
             }
         });
         
         document.getElementById('fileB').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                document.getElementById('fileBName').textContent = file.name;
-                document.getElementById('fileBInfo').style.display = 'block';
-                document.getElementById('fileBInfo').classList.add('success');
-                
-                Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        fileBData = results.data;
-                        checkFilesReady();
-                    }
-                });
+                handleFileUpload(file, 'B');
             }
         });
         
@@ -469,7 +561,6 @@
                 // Enable download buttons
                 document.getElementById('downloadCsv').disabled = false;
                 document.getElementById('downloadXlsx').disabled = false;
-                document.getElementById('generateAgain').disabled = false;
             }, 500);
         });
         
@@ -534,10 +625,13 @@
                     });
                 }
                 
-                // Pair 4: Product Cost vs Variant Cost
+                // Pair 4: Product Cost vs Variant Cost (normalize numeric values)
                 const costA = rowA['Product Cost'];
                 const costB = rowB['Variant Cost'];
-                if (costA !== costB) {
+                const normalizedCostA = normalizeNumericValue(costA);
+                const normalizedCostB = normalizeNumericValue(costB);
+                
+                if (normalizedCostA !== normalizedCostB) {
                     results.push({
                         SKU: skuA,
                         Title: title,
@@ -635,20 +729,6 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'QC Report');
             XLSX.writeFile(wb, 'webstore_qc_report.xlsx');
-        });
-        
-        // Generate Again function
-        document.getElementById('generateAgain').addEventListener('click', function() {
-            if (fileAData && fileBData) {
-                document.getElementById('results').innerHTML = '<div class="loading">Regenerating report...</div>';
-                
-                setTimeout(() => {
-                    processedResults = processFiles();
-                    displayResults();
-                }, 500);
-            } else {
-                alert('Please upload both files first.');
-            }
         });
     </script>
 </body>
